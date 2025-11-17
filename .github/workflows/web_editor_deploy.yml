@@ -83,6 +83,16 @@ jobs:
             echo "Using commit SHA as deploy path: $COMMIT_SHA"
           fi
 
+      - name: Print environment variables for debug
+        run: |
+          echo "=== Environment Variables ==="
+          echo "S3_BUCKET: ${{ env.S3_BUCKET }}"
+          echo "S3_ENDPOINT: ${{ env.S3_ENDPOINT }}"
+          echo "Deploy path: ${{ steps.deploy-path.outputs.path }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          echo "GITHUB_SHA: ${{ github.sha }}"
+          echo "============================"
+
       - name: Upload to Cloudflare R2
         uses: shallwefootball/s3-upload-action@master
         with:
@@ -158,6 +168,16 @@ jobs:
             echo "path=$COMMIT_SHA" >> $GITHUB_OUTPUT
             echo "Using commit SHA as deploy path: $COMMIT_SHA"
           fi
+
+      - name: Print environment variables for debug
+        run: |
+          echo "=== Environment Variables ==="
+          echo "S3_BUCKET: ${{ env.S3_BUCKET }}"
+          echo "S3_ENDPOINT: ${{ env.S3_ENDPOINT }}"
+          echo "Deploy path: ${{ steps.deploy-path.outputs.path }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          echo "GITHUB_SHA: ${{ github.sha }}"
+          echo "============================"
 
       - name: Upload to Cloudflare R2
         uses: shallwefootball/s3-upload-action@master
