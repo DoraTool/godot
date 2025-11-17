@@ -91,7 +91,7 @@ jobs:
           aws_bucket: ${{ env.S3_BUCKET }}
           source_dir: bin/.web_zip
           destination_dir: engine/${{ steps.deploy-path.outputs.path }}
-          endpoint: ${{ secrets.S3_ENDPOINT }}
+          endpoint: ${{ env.S3_ENDPOINT }}
 
   build-and-deploy-runtime:
     runs-on: ubuntu-24.04
@@ -167,5 +167,5 @@ jobs:
           aws_bucket: ${{ env.S3_BUCKET }}
           source_dir: bin/.web_zip
           destination_dir: runtime/${{ steps.deploy-path.outputs.path }}
-          endpoint: ${{ secrets.S3_ENDPOINT }}
+          endpoint: ${{ env.S3_ENDPOINT }}
 
