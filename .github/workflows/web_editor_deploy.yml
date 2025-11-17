@@ -14,11 +14,10 @@ env:
     debug_symbols=no
     use_closure_compiler=yes
   EM_VERSION: 4.0.11
-  CLOUDFLARE_PROJECT_NAME: gambo-engine
-  CLOUDFLARE_R2_BUCKET: gambo-engine
+  S3_BUCKET: gambo-engine
 
 jobs:
-  build-and-deploy:
+  build-and-deploy-editor:
     runs-on: ubuntu-24.04
     name: Build and Deploy Web Editor
     timeout-minutes: 60
@@ -89,8 +88,84 @@ jobs:
         with:
           aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws_bucket: ${{ env.CLOUDFLARE_R2_BUCKET }}
+          aws_bucket: ${{ env.S3_BUCKET }}
           source_dir: bin/.web_zip
-          destination_dir: ${{ steps.deploy-path.outputs.path }}
-          endpoint: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          destination_dir: engine/${{ steps.deploy-path.outputs.path }}
+          endpoint: ${{ secrets.S3_ENDPOINT }}
+
+  build-and-deploy-runtime:
+    runs-on: ubuntu-24.04
+    name: Build and Deploy Web Runtime
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Emscripten latest
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EM_VERSION }}
+          no-cache: true
+
+      - name: Verify Emscripten setup
+        run: |
+          emcc -v
+
+      - name: Restore Godot build cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: web-runtime
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+
+      - name: Compilation
+        uses: ./.github/actions/godot-build
+        with:
+          scons-flags: disable_3d=yes optimize=size threads=yes
+          platform: web
+          target: template_release
+
+      - name: Save Godot build cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: web-runtime
+        continue-on-error: true
+
+      - name: Verify build output
+        run: |
+          ls -la bin/.web_zip/
+          echo "Build output verified"
+
+      - name: Determine deploy path
+        id: deploy-path
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Extract tag name (remove refs/tags/ prefix)
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            echo "path=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "Using tag as deploy path: $TAG_NAME"
+          else
+            # Use commit SHA (short version)
+            COMMIT_SHA="${GITHUB_SHA:0:7}"
+            echo "path=$COMMIT_SHA" >> $GITHUB_OUTPUT
+            echo "Using commit SHA as deploy path: $COMMIT_SHA"
+          fi
+
+      - name: Upload to Cloudflare R2
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws_bucket: ${{ env.S3_BUCKET }}
+          source_dir: bin/.web_zip
+          destination_dir: runtime/${{ steps.deploy-path.outputs.path }}
+          endpoint: ${{ secrets.S3_ENDPOINT }}
 
