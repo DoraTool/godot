@@ -85,17 +85,12 @@ jobs:
           fi
 
       - name: Upload to Cloudflare R2
-        uses: cloudflare/wrangler-action@v3
+        uses: shallwefootball/s3-upload-action@master
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: |
-            cd bin/.web_zip
-            DEPLOY_PATH="${{ steps.deploy-path.outputs.path }}"
-            find . -type f | while read -r file; do
-              # Remove leading ./ from path
-              clean_path="${file#./}"
-              # Upload to R2 with deploy path prefix
-              wrangler r2 object put "${{ env.CLOUDFLARE_R2_BUCKET }}/${DEPLOY_PATH}/${clean_path}" --file="$file"
-            done
+          aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws_bucket: ${{ env.CLOUDFLARE_R2_BUCKET }}
+          source_dir: bin/.web_zip
+          destination_dir: ${{ steps.deploy-path.outputs.path }}
+          endpoint: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
 
