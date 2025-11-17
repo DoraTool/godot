@@ -1,8 +1,10 @@
-name: 🌐 Web Editor Deploy to Cloudflare Pages
+name: 🌐 Web Editor Deploy to Cloudflare R2
 on:
   push:
     branches:
       - '4.5'
+    tags:
+      - '*'
 
 # Global Settings
 env:
@@ -13,6 +15,7 @@ env:
     use_closure_compiler=yes
   EM_VERSION: 4.0.11
   CLOUDFLARE_PROJECT_NAME: gambo-engine
+  CLOUDFLARE_R2_BUCKET: gambo-engine
 
 jobs:
   build-and-deploy:
@@ -66,11 +69,33 @@ jobs:
           ls -la bin/.web_zip/
           echo "Build output verified"
 
-      - name: Deploy to Cloudflare Pages
+      - name: Determine deploy path
+        id: deploy-path
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            # Extract tag name (remove refs/tags/ prefix)
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            echo "path=$TAG_NAME" >> $GITHUB_OUTPUT
+            echo "Using tag as deploy path: $TAG_NAME"
+          else
+            # Use commit SHA (short version)
+            COMMIT_SHA="${GITHUB_SHA:0:7}"
+            echo "path=$COMMIT_SHA" >> $GITHUB_OUTPUT
+            echo "Using commit SHA as deploy path: $COMMIT_SHA"
+          fi
+
+      - name: Upload to Cloudflare R2
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy bin/.web_zip --project-name=${{ env.CLOUDFLARE_PROJECT_NAME }} --commit-dirty=true
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: |
+            cd bin/.web_zip
+            DEPLOY_PATH="${{ steps.deploy-path.outputs.path }}"
+            find . -type f | while read -r file; do
+              # Remove leading ./ from path
+              clean_path="${file#./}"
+              # Upload to R2 with deploy path prefix
+              wrangler r2 object put "${{ env.CLOUDFLARE_R2_BUCKET }}/${DEPLOY_PATH}/${clean_path}" --file="$file"
+            done
 
