@@ -14,7 +14,8 @@ env:
     debug_symbols=no
     use_closure_compiler=yes
   EM_VERSION: 4.0.11
-  S3_BUCKET: gambo-engine
+  S3_BUCKET: ${{ vars.S3_BUCKET }}
+  S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
 
 jobs:
   build-and-deploy-editor:
