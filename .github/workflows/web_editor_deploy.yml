@@ -94,11 +94,11 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             # For tags, use tag name directly
-            DEST_DIR="engine/${{ steps.deploy-path.outputs.path }}"
+            DEST_DIR="${{ steps.deploy-path.outputs.path }}/engine"
           else
             # For branches, prefix with branch name
             BRANCH_NAME="${{ steps.deploy-path.outputs.branch }}"
-            DEST_DIR="$BRANCH_NAME/engine/${{ steps.deploy-path.outputs.path }}"
+            DEST_DIR="$BRANCH_NAME/${{ steps.deploy-path.outputs.path }}/engine"
           fi
           echo "dir=$DEST_DIR" >> $GITHUB_OUTPUT
           echo "Destination directory: $DEST_DIR"
@@ -200,11 +200,11 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             # For tags, use tag name directly
-            DEST_DIR="runtime/${{ steps.deploy-path.outputs.path }}"
+            DEST_DIR="${{ steps.deploy-path.outputs.path }}/runtime"
           else
             # For branches, prefix with branch name
             BRANCH_NAME="${{ steps.deploy-path.outputs.branch }}"
-            DEST_DIR="$BRANCH_NAME/runtime/${{ steps.deploy-path.outputs.path }}"
+            DEST_DIR="$BRANCH_NAME/${{ steps.deploy-path.outputs.path }}/runtime"
           fi
           echo "dir=$DEST_DIR" >> $GITHUB_OUTPUT
           echo "Destination directory: $DEST_DIR"
