@@ -148,7 +148,7 @@ const Engine = (function () {
 				const me = this;
 				return me.init().then(function () {
 					if (!me.rtenv) {
-						return Promise.reject(new Error('The engine must be initialized before it can be started'));
+						return Promise.reject(new Error('The engine must be initialized before it can be  started'));
 					}
 
 					let config = {};
@@ -249,6 +249,170 @@ const Engine = (function () {
 				}
 				return Promise.resolve();
 			},
+
+			/**
+			 * Export API namespace for exporting projects to PCK files.
+			 * Only available in editor builds after the engine is initialized.
+			 */
+			export: {
+				pack: function (options) {
+					if (!this.rtenv) {
+						return Promise.reject(new Error('Engine must be initialized before exporting'));
+					}
+					const Module = this.rtenv;
+					const opts = options || {};
+					const preset_name = opts.presetName !== undefined ? opts.presetName : '';
+					const debug = opts.debug !== undefined ? opts.debug : false;
+
+					return new Promise(function (resolve, reject) {
+						try {
+							if (!Module._godot_js_export_pack) {
+								reject(new Error('Export API not available'));
+								return;
+							}
+
+							const preset_name_ptr = Module.allocString(preset_name);
+							const debug_int = debug ? 1 : 0;
+							const size_ptr = Module._malloc(4);
+
+							const buffer_ptr = Module._godot_js_export_pack(preset_name_ptr, debug_int, size_ptr);
+							Module._free(preset_name_ptr);
+
+							if (!buffer_ptr) {
+								Module._free(size_ptr);
+								reject(new Error('Failed to export PCK'));
+								return;
+							}
+
+							const size = Module.HEAP32[size_ptr >> 2];
+							Module._free(size_ptr);
+
+							if (size === 0) {
+								Module._free(buffer_ptr);
+								reject(new Error('Export returned empty buffer'));
+								return;
+							}
+
+							const buffer = new ArrayBuffer(size);
+							const view = new Uint8Array(buffer);
+							view.set(Module.HEAPU8.subarray(buffer_ptr, buffer_ptr + size));
+							Module._free(buffer_ptr);
+
+							resolve(buffer);
+						} catch (e) {
+							reject(e);
+						}
+					});
+				},
+
+				packPatch: function (options) {
+					if (!this.rtenv) {
+						return Promise.reject(new Error('Engine must be initialized before exporting'));
+					}
+					const Module = this.rtenv;
+					const opts = options || {};
+					const preset_name = opts.presetName !== undefined ? opts.presetName : '';
+					const debug = opts.debug !== undefined ? opts.debug : false;
+					const patches = opts.patches || [];
+					const patches_count = patches.length;
+
+					return new Promise(function (resolve, reject) {
+						try {
+							if (!Module._godot_js_export_pack_patch) {
+								reject(new Error('Export API not available'));
+								return;
+							}
+
+							const preset_name_ptr = Module.allocString(preset_name);
+							const debug_int = debug ? 1 : 0;
+							const patches_ptr = Module._malloc(patches_count * 4);
+							const patches_ptrs = [];
+
+							for (let i = 0; i < patches_count; i++) {
+								const str_ptr = Module.allocString(patches[i]);
+								patches_ptrs.push(str_ptr);
+								Module.HEAP32[(patches_ptr >> 2) + i] = str_ptr;
+							}
+
+							const size_ptr = Module._malloc(4);
+							const buffer_ptr = Module._godot_js_export_pack_patch(
+								preset_name_ptr, debug_int, patches_ptr, patches_count, size_ptr
+							);
+
+							Module._free(preset_name_ptr);
+							for (let i = 0; i < patches_ptrs.length; i++) {
+								Module._free(patches_ptrs[i]);
+							}
+							Module._free(patches_ptr);
+
+							if (!buffer_ptr) {
+								Module._free(size_ptr);
+								reject(new Error('Failed to export PCK patch'));
+								return;
+							}
+
+							const size = Module.HEAP32[size_ptr >> 2];
+							Module._free(size_ptr);
+
+							if (size === 0) {
+								Module._free(buffer_ptr);
+								reject(new Error('Export returned empty buffer'));
+								return;
+							}
+
+							const buffer = new ArrayBuffer(size);
+							const view = new Uint8Array(buffer);
+							view.set(Module.HEAPU8.subarray(buffer_ptr, buffer_ptr + size));
+							Module._free(buffer_ptr);
+
+							resolve(buffer);
+						} catch (e) {
+							reject(e);
+						}
+					});
+				},
+			},
+
+			/**
+			 * Events API namespace for listening to editor events.
+			 * Only available in editor builds after the engine is initialized.
+			 */
+			events: {
+				_saveCallback: null,
+
+				onSave: function (callback) {
+					if (!this.rtenv) {
+						throw new Error('Engine must be initialized before registering events');
+					}
+					if (typeof callback !== 'function') {
+						throw new Error('Callback must be a function');
+					}
+					const Module = this.rtenv;
+
+					if (!Module._godot_js_add_save_listener) {
+						throw new Error('Save listener API not available');
+					}
+					if (typeof GodotJSWrapper === 'undefined') {
+						throw new Error('GodotJSWrapper not available');
+					}
+
+					this.events._saveCallback = callback;
+					const callbackId = GodotJSWrapper.get_proxied(callback);
+					if (callbackId === undefined || callbackId === null) {
+						throw new Error('Failed to create callback proxy');
+					}
+
+					Module._godot_js_add_save_listener(callbackId);
+				},
+
+				offSave: function () {
+					if (!this.rtenv || !this.rtenv._godot_js_remove_save_listener) {
+						return;
+					}
+					this.events._saveCallback = null;
+					this.rtenv._godot_js_remove_save_listener();
+				},
+			},
 		};
 
 		Engine.prototype = proto;
@@ -260,6 +424,8 @@ const Engine = (function () {
 		Engine.prototype['copyToFS'] = Engine.prototype.copyToFS;
 		Engine.prototype['requestQuit'] = Engine.prototype.requestQuit;
 		Engine.prototype['installServiceWorker'] = Engine.prototype.installServiceWorker;
+		Engine.prototype['export'] = Engine.prototype.export;
+		Engine.prototype['events'] = Engine.prototype.events;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;

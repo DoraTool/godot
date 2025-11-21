@@ -331,6 +331,49 @@ export declare class Engine {
      */
     installServiceWorker(): Promise<ServiceWorkerRegistration>;
 
+    /**
+     * Export API namespace for exporting projects to PCK files.
+     * Only available in editor builds after the engine is initialized.
+     */
+    export: {
+        /**
+         * Export project to PCK file as ArrayBuffer.
+         * 
+         * @param options Export options (preset name and debug flag)
+         * @returns Promise that resolves to PCK file data as ArrayBuffer
+         * @throws Error if export fails or engine not initialized
+         */
+        pack(options?: ExportPackOptions): Promise<ArrayBuffer>;
+
+        /**
+         * Export project to PCK patch file as ArrayBuffer.
+         * 
+         * @param options Export options including patch file paths
+         * @returns Promise that resolves to PCK patch file data as ArrayBuffer
+         * @throws Error if export fails or engine not initialized
+         */
+        packPatch(options?: ExportPackPatchOptions): Promise<ArrayBuffer>;
+    };
+
+    /**
+     * Events API namespace for listening to editor events.
+     * Only available in editor builds after the engine is initialized.
+     */
+    events: {
+        /**
+         * Register a callback for editor save events.
+         * 
+         * @param callback Function to call when a save event occurs
+         * @throws Error if engine not initialized or callback registration fails
+         */
+        onSave(callback: SaveEventListener): void;
+
+        /**
+         * Unregister the save event listener.
+         */
+        offSave(): void;
+    };
+
     // Static methods
 
     /**
@@ -440,32 +483,6 @@ export interface ExportPackPatchOptions extends ExportPackOptions {
     patches?: string[];
 }
 
-/**
- * Godot Export API for exporting projects to PCK files.
- * 
- * Available in the web editor, allows JavaScript code to export projects
- * programmatically and receive the PCK file as an ArrayBuffer.
- */
-export interface GodotExport {
-    /**
-     * Export project to PCK file as ArrayBuffer.
-     * 
-     * @param options Export options (preset name and debug flag)
-     * @returns Promise that resolves to PCK file data as ArrayBuffer
-     * @throws Error if export fails or no presets are available
-     */
-    exportPack(options?: ExportPackOptions): Promise<ArrayBuffer>;
-
-    /**
-     * Export project to PCK patch file as ArrayBuffer.
-     * 
-     * @param options Export options including patch file paths
-     * @returns Promise that resolves to PCK patch file data as ArrayBuffer
-     * @throws Error if export fails or no presets are available
-     */
-    exportPackPatch(options?: ExportPackPatchOptions): Promise<ArrayBuffer>;
-}
-
 // ============================================================================
 // Editor Events API
 // ============================================================================
@@ -495,32 +512,6 @@ export interface SaveEvent {
  */
 export type SaveEventListener = (event: SaveEvent) => void;
 
-/**
- * Godot Editor Events API for listening to editor save events.
- * 
- * Available in the web editor, allows JavaScript code to listen for
- * scene and resource save events.
- */
-export interface GodotEditorEvents {
-    /**
-     * Register a callback for editor save events.
-     * 
-     * The callback will be called whenever a scene or resource is saved in the editor.
-     * 
-     * @param callback Function to call when a save event occurs.
-     *                 Receives a SaveEvent object with type, path, and optionally resourceType.
-     * @throws Error if callback is not a function or listener registration fails
-     */
-    onSave(callback: SaveEventListener): void;
-
-    /**
-     * Unregister the save event listener.
-     * 
-     * Removes the previously registered callback. Safe to call even if no listener is registered.
-     */
-    offSave(): void;
-}
-
 // ============================================================================
 // Global Window Augmentation
 // ============================================================================
@@ -531,18 +522,6 @@ declare global {
          * The Godot Engine class exposed globally for web exports.
          */
         Engine: typeof Engine;
-
-        /**
-         * The Godot Export API exposed globally for web editor exports.
-         * Available only in editor builds.
-         */
-        GodotExport?: GodotExport;
-
-        /**
-         * The Godot Editor Events API exposed globally for web editor.
-         * Available only in editor builds.
-         */
-        GodotEditorEvents?: GodotEditorEvents;
     }
 }
 
