@@ -467,6 +467,61 @@ export interface GodotExport {
 }
 
 // ============================================================================
+// Editor Events API
+// ============================================================================
+
+/**
+ * Save event data structure.
+ */
+export interface SaveEvent {
+    /**
+     * Type of save event: 'scene' for scene saves, 'resource' for resource saves.
+     */
+    type: 'scene' | 'resource';
+
+    /**
+     * Path to the saved file.
+     */
+    path: string;
+
+    /**
+     * Resource type (only present for resource saves).
+     */
+    resourceType?: string;
+}
+
+/**
+ * Callback function for save events.
+ */
+export type SaveEventListener = (event: SaveEvent) => void;
+
+/**
+ * Godot Editor Events API for listening to editor save events.
+ * 
+ * Available in the web editor, allows JavaScript code to listen for
+ * scene and resource save events.
+ */
+export interface GodotEditorEvents {
+    /**
+     * Register a callback for editor save events.
+     * 
+     * The callback will be called whenever a scene or resource is saved in the editor.
+     * 
+     * @param callback Function to call when a save event occurs.
+     *                 Receives a SaveEvent object with type, path, and optionally resourceType.
+     * @throws Error if callback is not a function or listener registration fails
+     */
+    onSave(callback: SaveEventListener): void;
+
+    /**
+     * Unregister the save event listener.
+     * 
+     * Removes the previously registered callback. Safe to call even if no listener is registered.
+     */
+    offSave(): void;
+}
+
+// ============================================================================
 // Global Window Augmentation
 // ============================================================================
 
@@ -482,6 +537,12 @@ declare global {
          * Available only in editor builds.
          */
         GodotExport?: GodotExport;
+
+        /**
+         * The Godot Editor Events API exposed globally for web editor.
+         * Available only in editor builds.
+         */
+        GodotEditorEvents?: GodotEditorEvents;
     }
 }
 
