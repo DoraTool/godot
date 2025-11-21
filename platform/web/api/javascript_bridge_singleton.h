@@ -65,6 +65,11 @@ public:
 	Error pwa_update();
 	void force_fs_sync();
 
+#ifdef TOOLS_ENABLED
+	PackedByteArray export_pack(const String &p_preset_name, bool p_debug);
+	PackedByteArray export_pack_patch(const String &p_preset_name, bool p_debug, const PackedStringArray &p_patches);
+#endif // TOOLS_ENABLED
+
 	static JavaScriptBridge *get_singleton();
 	JavaScriptBridge();
 	~JavaScriptBridge();

@@ -55,7 +55,10 @@ sys_env.AddJSExterns(
 )
 
 if env["javascript_eval"]:
-    sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
+	sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
+
+if env["target"] == "editor":
+	sys_env.AddJSLibraries(["js/libs/library_godot_export.js"])
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

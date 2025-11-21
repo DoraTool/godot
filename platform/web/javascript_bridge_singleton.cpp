@@ -33,6 +33,15 @@
 #include "os_web.h"
 
 #include <emscripten.h>
+#include <cstdlib>
+#include <cstring>
+
+#ifdef TOOLS_ENABLED
+#include "core/config/engine.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
+#include "editor/export/editor_export.h"
+#endif // TOOLS_ENABLED
 
 extern "C" {
 extern void godot_js_os_download_buffer(const uint8_t *p_buf, int p_buf_size, const char *p_name, const char *p_mime);
@@ -406,3 +415,172 @@ Error JavaScriptBridge::pwa_update() {
 void JavaScriptBridge::force_fs_sync() {
 	OS_Web::get_singleton()->force_fs_sync();
 }
+
+#ifdef TOOLS_ENABLED
+
+PackedByteArray JavaScriptBridge::export_pack(const String &p_preset_name, bool p_debug) {
+	ERR_FAIL_COND_V_MSG(!Engine::get_singleton() || !Engine::get_singleton()->is_editor_hint(), PackedByteArray(), "Export is only available in editor mode.");
+
+	EditorExport *ee = EditorExport::get_singleton();
+	ERR_FAIL_COND_V_MSG(!ee, PackedByteArray(), "EditorExport singleton not available.");
+
+	// Find the export preset
+	Ref<EditorExportPreset> preset;
+	if (p_preset_name.is_empty()) {
+		// Use first available preset
+		if (ee->get_export_preset_count() == 0) {
+			ERR_FAIL_V_MSG(PackedByteArray(), "No export presets available.");
+		}
+		preset = ee->get_export_preset(0);
+	} else {
+		// Find preset by name
+		bool found = false;
+		for (int i = 0; i < ee->get_export_preset_count(); i++) {
+			Ref<EditorExportPreset> p = ee->get_export_preset(i);
+			if (p->get_name() == p_preset_name) {
+				preset = p;
+				found = true;
+				break;
+			}
+		}
+		ERR_FAIL_COND_V_MSG(!found, PackedByteArray(), vformat("Export preset '%s' not found.", p_preset_name));
+	}
+
+	ERR_FAIL_COND_V_MSG(preset.is_null(), PackedByteArray(), "Invalid export preset.");
+
+	Ref<EditorExportPlatform> platform = preset->get_platform();
+	ERR_FAIL_COND_V_MSG(platform.is_null(), PackedByteArray(), "Export platform not available.");
+
+	// Create temporary file path
+	const String temp_path = String("/tmp").path_join("export_temp.pck");
+
+	// Export to temp file
+	Error err = platform->export_pack(preset, p_debug, temp_path);
+	if (err != OK) {
+		ERR_FAIL_V_MSG(PackedByteArray(), vformat("Failed to export PCK: %s", error_names[err]));
+	}
+
+	// Read the file back
+	Ref<FileAccess> f = FileAccess::open(temp_path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), PackedByteArray(), "Failed to read exported PCK file.");
+
+	PackedByteArray buffer;
+	buffer.resize(f->get_length());
+	f->get_buffer(buffer.ptrw(), buffer.size());
+	f.unref();
+
+	// Cleanup temp file
+	DirAccess::remove_file_or_error(temp_path);
+
+	return buffer;
+}
+
+PackedByteArray JavaScriptBridge::export_pack_patch(const String &p_preset_name, bool p_debug, const PackedStringArray &p_patches) {
+	ERR_FAIL_COND_V_MSG(!Engine::get_singleton() || !Engine::get_singleton()->is_editor_hint(), PackedByteArray(), "Export is only available in editor mode.");
+
+	EditorExport *ee = EditorExport::get_singleton();
+	ERR_FAIL_COND_V_MSG(!ee, PackedByteArray(), "EditorExport singleton not available.");
+
+	// Find the export preset
+	Ref<EditorExportPreset> preset;
+	if (p_preset_name.is_empty()) {
+		// Use first available preset
+		if (ee->get_export_preset_count() == 0) {
+			ERR_FAIL_V_MSG(PackedByteArray(), "No export presets available.");
+		}
+		preset = ee->get_export_preset(0);
+	} else {
+		// Find preset by name
+		bool found = false;
+		for (int i = 0; i < ee->get_export_preset_count(); i++) {
+			Ref<EditorExportPreset> p = ee->get_export_preset(i);
+			if (p->get_name() == p_preset_name) {
+				preset = p;
+				found = true;
+				break;
+			}
+		}
+		ERR_FAIL_COND_V_MSG(!found, PackedByteArray(), vformat("Export preset '%s' not found.", p_preset_name));
+	}
+
+	ERR_FAIL_COND_V_MSG(preset.is_null(), PackedByteArray(), "Invalid export preset.");
+
+	Ref<EditorExportPlatform> platform = preset->get_platform();
+	ERR_FAIL_COND_V_MSG(platform.is_null(), PackedByteArray(), "Export platform not available.");
+
+	// Convert PackedStringArray to Vector<String>
+	Vector<String> patches_vec;
+	for (int i = 0; i < p_patches.size(); i++) {
+		patches_vec.push_back(p_patches[i]);
+	}
+
+	// Create temporary file path
+	const String temp_path = String("/tmp").path_join("export_temp_patch.pck");
+
+	// Export to temp file
+	Error err = platform->export_pack_patch(preset, p_debug, temp_path, patches_vec);
+	if (err != OK) {
+		ERR_FAIL_V_MSG(PackedByteArray(), vformat("Failed to export PCK patch: %s", error_names[err]));
+	}
+
+	// Read the file back
+	Ref<FileAccess> f = FileAccess::open(temp_path, FileAccess::READ);
+	ERR_FAIL_COND_V_MSG(f.is_null(), PackedByteArray(), "Failed to read exported PCK patch file.");
+
+	PackedByteArray buffer;
+	buffer.resize(f->get_length());
+	f->get_buffer(buffer.ptrw(), buffer.size());
+	f.unref();
+
+	// Cleanup temp file
+	DirAccess::remove_file_or_error(temp_path);
+
+	return buffer;
+}
+
+extern "C" {
+// Export functions for JavaScript
+EMSCRIPTEN_KEEPALIVE
+void *godot_js_export_pack(const char *p_preset_name, int p_debug, int *p_size) {
+	JavaScriptBridge *bridge = JavaScriptBridge::get_singleton();
+	if (!bridge) {
+		*p_size = 0;
+		return nullptr;
+	}
+	PackedByteArray buffer = bridge->export_pack(String::utf8(p_preset_name), p_debug != 0);
+	if (buffer.is_empty()) {
+		*p_size = 0;
+		return nullptr;
+	}
+	*p_size = buffer.size();
+	// Allocate memory and copy data (caller must free)
+	void *result = malloc(buffer.size());
+	memcpy(result, buffer.ptr(), buffer.size());
+	return result;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void *godot_js_export_pack_patch(const char *p_preset_name, int p_debug, const char **p_patches, int p_patches_count, int *p_size) {
+	JavaScriptBridge *bridge = JavaScriptBridge::get_singleton();
+	if (!bridge) {
+		*p_size = 0;
+		return nullptr;
+	}
+	PackedStringArray patches;
+	for (int i = 0; i < p_patches_count; i++) {
+		patches.push_back(String::utf8(p_patches[i]));
+	}
+	PackedByteArray buffer = bridge->export_pack_patch(String::utf8(p_preset_name), p_debug != 0, patches);
+	if (buffer.is_empty()) {
+		*p_size = 0;
+		return nullptr;
+	}
+	*p_size = buffer.size();
+	// Allocate memory and copy data (caller must free)
+	void *result = malloc(buffer.size());
+	memcpy(result, buffer.ptr(), buffer.size());
+	return result;
+}
+} // extern "C"
+
+#endif // TOOLS_ENABLED

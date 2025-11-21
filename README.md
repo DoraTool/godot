@@ -1,3 +1,9 @@
+# Extension
+
+## Web Editor Export API
+
+The web editor exposes a JavaScript API for programmatically exporting projects to PCK files. Use `window.GodotExport.exportPack()` or `window.GodotExport.exportPackPatch()` to export projects and receive the PCK file as an `ArrayBuffer` for programmatic use (uploading to servers, storing in IndexedDB, etc.). See `godot.d.ts` for TypeScript definitions.
+
 # Godot Engine
 
 <p align="center">
@@ -15,6 +21,7 @@ users can focus on making games without having to reinvent the wheel. Games can
 be exported with one click to a number of platforms, including the major desktop
 platforms (Linux, macOS, Windows), mobile platforms (Android, iOS), as well as
 Web-based platforms and [consoles](https://docs.godotengine.org/en/latest/tutorials/platform/consoles.html).
+
 
 ## Free, open source and community-driven
 
