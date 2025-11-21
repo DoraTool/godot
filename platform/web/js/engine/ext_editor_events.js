@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  library_godot_editor_events.js                                      */
+/*  ext_editor_events.js                                                  */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,60 +28,73 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-const GodotEditorEvents = {
-	$GodotEditorEvents__deps: ['$GodotRuntime', '$GodotJSWrapper'],
+/**
+ * Godot Editor Events API for listening to editor events.
+ *
+ * Available only in editor builds, allows JavaScript code to listen for
+ * events like scene or resource saves.
+ *
+ * @module GodotEditorEvents
+ * @header Web Editor Events API
+ */
+const GodotEditorEvents = (function () {
+	let _saveCallback = null;
 
-	$GodotEditorEvents: {
-		_saveCallback: null,
+	/**
+	 * Register a callback for editor save events.
+	 *
+	 * @param {function(object):void} callback - Function to call when a save event occurs.
+	 *                              Receives an event object: { type: 'scene' | 'resource', path: string }
+	 */
+	function onSave(callback) {
+		if (typeof callback !== 'function') {
+			throw new Error('Callback must be a function');
+		}
 
-		/**
-		 * Register a callback for editor save events.
-		 * 
-		 * @param {function} callback - Function to call when a save event occurs.
-		 *                              Receives an event object: { type: 'scene' | 'resource', path: string, resourceType?: string }
-		 */
-		onSave: function (callback) {
-			if (typeof callback !== 'function') {
-				throw new Error('Callback must be a function');
-			}
+		// Access dependencies from global scope (provided by library files)
+		if (typeof Module === 'undefined' || !Module._godot_js_add_save_listener) {
+			throw new Error('Save listener API not available. Make sure the editor is running.');
+		}
 
-			// Store callback
-			GodotEditorEvents.GodotEditorEvents._saveCallback = callback;
+		if (typeof GodotJSWrapper === 'undefined') {
+			throw new Error('GodotJSWrapper not available.');
+		}
 
-			// Get proxied ID for the callback function
-			// GodotJSWrapper.get_proxied returns an ID that can be used to create JavaScriptObjectImpl
-			const callbackId = GodotJSWrapper.get_proxied(callback);
-			if (callbackId === undefined || callbackId === null) {
-				throw new Error('Failed to create callback proxy');
-			}
+		// Store callback
+		_saveCallback = callback;
 
-			// Call C binding to register the listener
-			if (typeof Module !== 'undefined' && Module['_godot_js_add_save_listener']) {
-				Module._godot_js_add_save_listener(callbackId);
-			} else {
-				throw new Error('Save listener API not available. Make sure the editor is running.');
-			}
-		},
+		// Get proxied ID for the callback function
+		// GodotJSWrapper.get_proxied returns an ID that can be used to create JavaScriptObjectImpl
+		const callbackId = GodotJSWrapper.get_proxied(callback);
+		if (callbackId === undefined || callbackId === null) {
+			throw new Error('Failed to create callback proxy');
+		}
 
-		/**
-		 * Unregister the save event listener.
-		 */
-		offSave: function () {
-			GodotEditorEvents.GodotEditorEvents._saveCallback = null;
+		// Call C binding to register the listener
+		Module._godot_js_add_save_listener(callbackId);
+	}
 
-			// Call C binding to unregister the listener
-			if (typeof Module !== 'undefined' && Module['_godot_js_remove_save_listener']) {
-				Module._godot_js_remove_save_listener();
-			}
-		},
-	},
-};
+	/**
+	 * Unregister the save event listener.
+	 */
+	function offSave() {
+		if (typeof Module === 'undefined' || !Module._godot_js_remove_save_listener) {
+			return;
+		}
 
-autoAddDeps(GodotEditorEvents, '$GodotEditorEvents');
-mergeInto(LibraryManager.library, GodotEditorEvents);
+		_saveCallback = null;
 
-// Expose to global scope for JavaScript access
+		// Call C binding to unregister the listener
+		Module._godot_js_remove_save_listener();
+	}
+
+	return {
+		onSave: onSave,
+		offSave: offSave,
+	};
+}());
+
 if (typeof window !== 'undefined') {
-	window['GodotEditorEvents'] = GodotEditorEvents.GodotEditorEvents;
+	window['GodotEditorEvents'] = GodotEditorEvents;
 }
 
