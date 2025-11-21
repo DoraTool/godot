@@ -403,15 +403,12 @@ const Engine = (function () {
 				}
 				const Module = this.rtenv;
 
-				if (!Module._godot_js_add_save_listener) {
+				if (!Module._godot_js_add_save_listener || !Module.GodotExt) {
 					throw new Error('Save listener API not available');
-				}
-				if (typeof GodotJSWrapper === 'undefined') {
-					throw new Error('GodotJSWrapper not available');
 				}
 
 				this._saveCallback = callback;
-				const callbackId = GodotJSWrapper.get_proxied(callback);
+				const callbackId = Module.GodotExt.get_callback_id(callback);
 				if (callbackId === undefined || callbackId === null) {
 					throw new Error('Failed to create callback proxy');
 				}
