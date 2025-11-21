@@ -79,6 +79,8 @@ void JavaScriptBridge::_bind_methods() {
 #ifdef TOOLS_ENABLED
 	ClassDB::bind_method(D_METHOD("export_pack", "preset_name", "debug"), &JavaScriptBridge::export_pack, DEFVAL(""), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("export_pack_patch", "preset_name", "debug", "patches"), &JavaScriptBridge::export_pack_patch, DEFVAL(""), DEFVAL(false), DEFVAL(PackedStringArray()));
+	ClassDB::bind_method(D_METHOD("add_save_listener", "callback"), &JavaScriptBridge::add_save_listener);
+	ClassDB::bind_method(D_METHOD("remove_save_listener"), &JavaScriptBridge::remove_save_listener);
 #endif // TOOLS_ENABLED
 	ADD_SIGNAL(MethodInfo("pwa_update_available"));
 }

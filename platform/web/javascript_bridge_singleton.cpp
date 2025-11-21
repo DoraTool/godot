@@ -40,6 +40,8 @@
 #include "core/config/engine.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
+#include "core/object/object.h"
+#include "editor/editor_node.h"
 #include "editor/export/editor_export.h"
 #endif // TOOLS_ENABLED
 
@@ -538,6 +540,77 @@ PackedByteArray JavaScriptBridge::export_pack_patch(const String &p_preset_name,
 	return buffer;
 }
 
+void JavaScriptBridge::add_save_listener(Ref<JavaScriptObject> p_callback) {
+	ERR_FAIL_COND_MSG(!Engine::get_singleton() || !Engine::get_singleton()->is_editor_hint(), "Save listener is only available in editor mode.");
+
+	if (save_listener_callback.is_valid()) {
+		remove_save_listener();
+	}
+
+	save_listener_callback = p_callback;
+
+	EditorNode *editor = EditorNode::get_singleton();
+	if (editor) {
+		editor->connect("scene_saved", callable_mp(this, &JavaScriptBridge::_on_scene_saved));
+		editor->connect("resource_saved", callable_mp(this, &JavaScriptBridge::_on_resource_saved));
+	}
+}
+
+void JavaScriptBridge::remove_save_listener() {
+	if (!save_listener_callback.is_valid()) {
+		return;
+	}
+
+	EditorNode *editor = EditorNode::get_singleton();
+	if (editor) {
+		editor->disconnect("scene_saved", callable_mp(this, &JavaScriptBridge::_on_scene_saved));
+		editor->disconnect("resource_saved", callable_mp(this, &JavaScriptBridge::_on_resource_saved));
+	}
+
+	save_listener_callback.unref();
+}
+
+void JavaScriptBridge::_on_scene_saved(const String &p_path) {
+	if (!save_listener_callback.is_valid()) {
+		return;
+	}
+
+	Dictionary event;
+	event["type"] = "scene";
+	event["path"] = p_path;
+
+	Variant event_var = event;
+	const Variant *args[] = { &event_var };
+	Callable::CallError error;
+	// Call the JavaScript function directly (empty method name for function invocation)
+	save_listener_callback->callp(StringName(), args, 1, error);
+	if (error.error != Callable::CallError::CALL_OK) {
+		// Fallback: try calling as a method
+		save_listener_callback->callp("call", args, 1, error);
+	}
+}
+
+void JavaScriptBridge::_on_resource_saved(const Ref<Resource> &p_resource) {
+	if (!save_listener_callback.is_valid() || !p_resource.is_valid()) {
+		return;
+	}
+
+	Dictionary event;
+	event["type"] = "resource";
+	event["path"] = p_resource->get_path();
+	event["resourceType"] = p_resource->get_class();
+
+	Variant event_var = event;
+	const Variant *args[] = { &event_var };
+	Callable::CallError error;
+	// Call the JavaScript function directly (empty method name for function invocation)
+	save_listener_callback->callp(StringName(), args, 1, error);
+	if (error.error != Callable::CallError::CALL_OK) {
+		// Fallback: try calling as a method
+		save_listener_callback->callp("call", args, 1, error);
+	}
+}
+
 extern "C" {
 // Export functions for JavaScript
 EMSCRIPTEN_KEEPALIVE
@@ -580,6 +653,29 @@ void *godot_js_export_pack_patch(const char *p_preset_name, int p_debug, const c
 	void *result = malloc(buffer.size());
 	memcpy(result, buffer.ptr(), buffer.size());
 	return result;
+}
+EMSCRIPTEN_KEEPALIVE
+void godot_js_add_save_listener(int p_callback_id) {
+#ifdef TOOLS_ENABLED
+	JavaScriptBridge *bridge = JavaScriptBridge::get_singleton();
+	if (!bridge) {
+		return;
+	}
+	// Create JavaScriptObject from the callback ID
+	Ref<JavaScriptObjectImpl> callback_obj = memnew(JavaScriptObjectImpl(p_callback_id));
+	bridge->add_save_listener(callback_obj);
+#endif
+}
+
+EMSCRIPTEN_KEEPALIVE
+void godot_js_remove_save_listener() {
+#ifdef TOOLS_ENABLED
+	JavaScriptBridge *bridge = JavaScriptBridge::get_singleton();
+	if (!bridge) {
+		return;
+	}
+	bridge->remove_save_listener();
+#endif
 }
 } // extern "C"
 

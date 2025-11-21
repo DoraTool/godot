@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  javascript_bridge_singleton.h                                         */
+/*  library_godot_editor_events.js                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,63 +28,60 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef JAVASCRIPT_BRIDGE_SINGLETON_H
-#define JAVASCRIPT_BRIDGE_SINGLETON_H
+const GodotEditorEvents = {
+	$GodotEditorEvents__deps: ['$GodotRuntime', '$GodotJSWrapper'],
 
-#include "core/object/class_db.h"
-#include "core/object/ref_counted.h"
+	$GodotEditorEvents: {
+		_saveCallback: null,
 
-#ifdef TOOLS_ENABLED
-class Resource;
-#endif // TOOLS_ENABLED
+		/**
+		 * Register a callback for editor save events.
+		 * 
+		 * @param {function} callback - Function to call when a save event occurs.
+		 *                              Receives an event object: { type: 'scene' | 'resource', path: string, resourceType?: string }
+		 */
+		onSave: function (callback) {
+			if (typeof callback !== 'function') {
+				throw new Error('Callback must be a function');
+			}
 
-class JavaScriptObject : public RefCounted {
-private:
-	GDCLASS(JavaScriptObject, RefCounted);
+			// Store callback
+			GodotEditorEvents.GodotEditorEvents._saveCallback = callback;
 
-protected:
-	virtual bool _set(const StringName &p_name, const Variant &p_value) { return false; }
-	virtual bool _get(const StringName &p_name, Variant &r_ret) const { return false; }
-	virtual void _get_property_list(List<PropertyInfo> *p_list) const {}
+			// Get proxied ID for the callback function
+			// GodotJSWrapper.get_proxied returns an ID that can be used to create JavaScriptObjectImpl
+			const callbackId = GodotJSWrapper.get_proxied(callback);
+			if (callbackId === undefined || callbackId === null) {
+				throw new Error('Failed to create callback proxy');
+			}
+
+			// Call C binding to register the listener
+			if (typeof Module !== 'undefined' && Module['_godot_js_add_save_listener']) {
+				Module._godot_js_add_save_listener(callbackId);
+			} else {
+				throw new Error('Save listener API not available. Make sure the editor is running.');
+			}
+		},
+
+		/**
+		 * Unregister the save event listener.
+		 */
+		offSave: function () {
+			GodotEditorEvents.GodotEditorEvents._saveCallback = null;
+
+			// Call C binding to unregister the listener
+			if (typeof Module !== 'undefined' && Module['_godot_js_remove_save_listener']) {
+				Module._godot_js_remove_save_listener();
+			}
+		},
+	},
 };
 
-class JavaScriptBridge : public Object {
-private:
-	GDCLASS(JavaScriptBridge, Object);
+autoAddDeps(GodotEditorEvents, '$GodotEditorEvents');
+mergeInto(LibraryManager.library, GodotEditorEvents);
 
-	static JavaScriptBridge *singleton;
+// Expose to global scope for JavaScript access
+if (typeof window !== 'undefined') {
+	window['GodotEditorEvents'] = GodotEditorEvents.GodotEditorEvents;
+}
 
-#ifdef TOOLS_ENABLED
-	Ref<JavaScriptObject> save_listener_callback;
-	void _on_scene_saved(const String &p_path);
-	void _on_resource_saved(const Ref<Resource> &p_resource);
-#endif // TOOLS_ENABLED
-
-protected:
-	static void _bind_methods();
-
-public:
-	Variant eval(const String &p_code, bool p_use_global_exec_context = false);
-	Ref<JavaScriptObject> get_interface(const String &p_interface);
-	Ref<JavaScriptObject> create_callback(const Callable &p_callable);
-	bool is_js_buffer(Ref<JavaScriptObject> p_js_obj);
-	PackedByteArray js_buffer_to_packed_byte_array(Ref<JavaScriptObject> p_js_obj);
-	Variant _create_object_bind(const Variant **p_args, int p_argcount, Callable::CallError &r_error);
-	void download_buffer(Vector<uint8_t> p_arr, const String &p_name, const String &p_mime = "application/octet-stream");
-	bool pwa_needs_update() const;
-	Error pwa_update();
-	void force_fs_sync();
-
-#ifdef TOOLS_ENABLED
-	PackedByteArray export_pack(const String &p_preset_name, bool p_debug);
-	PackedByteArray export_pack_patch(const String &p_preset_name, bool p_debug, const PackedStringArray &p_patches);
-	void add_save_listener(Ref<JavaScriptObject> p_callback);
-	void remove_save_listener();
-#endif // TOOLS_ENABLED
-
-	static JavaScriptBridge *get_singleton();
-	JavaScriptBridge();
-	~JavaScriptBridge();
-};
-
-#endif // JAVASCRIPT_BRIDGE_SINGLETON_H
