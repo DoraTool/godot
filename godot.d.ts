@@ -332,47 +332,39 @@ export declare class Engine {
     installServiceWorker(): Promise<ServiceWorkerRegistration>;
 
     /**
-     * Export API namespace for exporting projects to PCK files.
+     * Export project to PCK file as ArrayBuffer.
      * Only available in editor builds after the engine is initialized.
+     * 
+     * @param options Export options (preset name and debug flag)
+     * @returns Promise that resolves to PCK file data as ArrayBuffer
+     * @throws Error if export fails or engine not initialized
      */
-    export: {
-        /**
-         * Export project to PCK file as ArrayBuffer.
-         * 
-         * @param options Export options (preset name and debug flag)
-         * @returns Promise that resolves to PCK file data as ArrayBuffer
-         * @throws Error if export fails or engine not initialized
-         */
-        pack(options?: ExportPackOptions): Promise<ArrayBuffer>;
-
-        /**
-         * Export project to PCK patch file as ArrayBuffer.
-         * 
-         * @param options Export options including patch file paths
-         * @returns Promise that resolves to PCK patch file data as ArrayBuffer
-         * @throws Error if export fails or engine not initialized
-         */
-        packPatch(options?: ExportPackPatchOptions): Promise<ArrayBuffer>;
-    };
+    exportPack(options?: ExportPackOptions): Promise<ArrayBuffer>;
 
     /**
-     * Events API namespace for listening to editor events.
+     * Export project to PCK patch file as ArrayBuffer.
      * Only available in editor builds after the engine is initialized.
+     * 
+     * @param options Export options including patch file paths
+     * @returns Promise that resolves to PCK patch file data as ArrayBuffer
+     * @throws Error if export fails or engine not initialized
      */
-    events: {
-        /**
-         * Register a callback for editor save events.
-         * 
-         * @param callback Function to call when a save event occurs
-         * @throws Error if engine not initialized or callback registration fails
-         */
-        onSave(callback: SaveEventListener): void;
+    exportPackPatch(options?: ExportPackPatchOptions): Promise<ArrayBuffer>;
 
-        /**
-         * Unregister the save event listener.
-         */
-        offSave(): void;
-    };
+    /**
+     * Register a callback for editor save events.
+     * Only available in editor builds after the engine is initialized.
+     * 
+     * @param callback Function to call when a save event occurs
+     * @throws Error if engine not initialized or callback registration fails
+     */
+    onSave(callback: SaveEventListener): void;
+
+    /**
+     * Unregister the save event listener.
+     * Only available in editor builds.
+     */
+    offSave(): void;
 
     // Static methods
 
