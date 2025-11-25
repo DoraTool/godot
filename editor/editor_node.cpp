@@ -159,6 +159,7 @@
 #include "editor/progress_dialog.h"
 #include "editor/project_settings_editor.h"
 #include "editor/register_exporters.h"
+#include "editor/scene_only_dock.h"
 #include "editor/scene_tree_dock.h"
 #include "editor/surface_upgrade_tool.h"
 #include "editor/themes/editor_scale.h"
@@ -7725,6 +7726,9 @@ EditorNode::EditorNode() {
 	filesystem_dock->connect("display_mode_changed", callable_mp(this, &EditorNode::_save_editor_layout));
 	get_project_settings()->connect_filesystem_dock_signals(filesystem_dock);
 
+	SceneOnlyDock *scene_only_dock = memnew(SceneOnlyDock);
+	scene_only_dock->connect("instantiate", callable_mp(this, &EditorNode::_instantiate_request));
+
 	history_dock = memnew(HistoryDock);
 
 	// Scene: Top left.
@@ -7735,6 +7739,7 @@ EditorNode::EditorNode() {
 
 	// FileSystem: Bottom left.
 	editor_dock_manager->add_dock(FileSystemDock::get_singleton(), TTR("FileSystem"), EditorDockManager::DOCK_SLOT_LEFT_BR, ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_filesystem_bottom_panel", TTRC("Toggle FileSystem Bottom Panel"), KeyModifierMask::ALT | Key::F), "Folder");
+	editor_dock_manager->add_dock(scene_only_dock, TTR("Scenes"), EditorDockManager::DOCK_SLOT_LEFT_BR, nullptr, "PackedScene");
 
 	// Inspector: Full height right.
 	editor_dock_manager->add_dock(InspectorDock::get_singleton(), TTR("Inspector"), EditorDockManager::DOCK_SLOT_RIGHT_UL, nullptr, "AnimationTrackList");
@@ -7755,7 +7760,7 @@ EditorNode::EditorNode() {
 	default_layout.instantiate();
 	// Dock numbers are based on DockSlot enum value + 1.
 	default_layout->set_value(docks_section, "dock_3", "Scene,Import");
-	default_layout->set_value(docks_section, "dock_4", "FileSystem");
+	default_layout->set_value(docks_section, "dock_4", "FileSystem,Scenes");
 	default_layout->set_value(docks_section, "dock_5", "Inspector,Node,History");
 
 	// There are 4 vsplits and 4 hsplits.
