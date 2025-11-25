@@ -343,6 +343,22 @@ void EditorNode::_update_title() {
 	}
 }
 
+void EditorNode::set_easy_mode(bool p_enabled) {
+	if (singleton->easy_mode == p_enabled) {
+		return;
+	}
+	singleton->easy_mode = p_enabled;
+	EditorSettings::get_singleton()->set("interface/editor/easy_mode", p_enabled);
+	EditorSettings::get_singleton()->save();
+
+	// Hide/show main menu bar based on easy mode.
+	if (singleton->main_menu) {
+		singleton->main_menu->set_visible(!p_enabled);
+	}
+
+	singleton->emit_signal(SNAME("easy_mode_changed"), p_enabled);
+}
+
 void EditorNode::input(const Ref<InputEvent> &p_event) {
 	// EditorNode::get_singleton()->set_process_input is set to true in ProgressDialog
 	// only when the progress dialog is visible.
@@ -6796,6 +6812,7 @@ void EditorNode::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("scene_saved", PropertyInfo(Variant::STRING, "path")));
 	ADD_SIGNAL(MethodInfo("scene_changed"));
 	ADD_SIGNAL(MethodInfo("scene_closed", PropertyInfo(Variant::STRING, "path")));
+	ADD_SIGNAL(MethodInfo("easy_mode_changed", PropertyInfo(Variant::BOOL, "enabled")));
 }
 
 static Node *_resource_get_edited_scene() {
@@ -8173,6 +8190,12 @@ EditorNode::EditorNode() {
 	add_child(system_theme_timer);
 	system_theme_timer->set_owner(get_owner());
 	system_theme_timer->set_autostart(true);
+
+	// Load easy mode state from settings.
+	easy_mode = EDITOR_GET("interface/editor/easy_mode");
+	if (easy_mode) {
+		main_menu->set_visible(false);
+	}
 }
 
 EditorNode::~EditorNode() {

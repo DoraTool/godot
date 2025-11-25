@@ -33,6 +33,8 @@
 
 #include "scene/gui/link_button.h"
 
+class Timer;
+
 class EditorVersionButton : public LinkButton {
 	GDCLASS(EditorVersionButton, LinkButton);
 
@@ -48,6 +50,15 @@ public:
 
 private:
 	VersionFormat format = FORMAT_WITH_NAME_AND_BUILD;
+
+	// Easy mode secret toggle.
+	int click_count = 0;
+	Timer *click_timer = nullptr;
+	static const int EASY_MODE_CLICK_COUNT = 10;
+
+	void _click_timer_timeout();
+	void _update_version_text();
+	void _on_easy_mode_changed(bool p_enabled);
 
 protected:
 	void _notification(int p_what);

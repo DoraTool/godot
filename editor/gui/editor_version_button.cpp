@@ -32,12 +32,14 @@
 
 #include "core/os/time.h"
 #include "core/version.h"
+#include "editor/editor_node.h"
+#include "scene/main/timer.h"
 
-String _get_version_string(EditorVersionButton::VersionFormat p_format) {
+String _get_version_string(EditorVersionButton::VersionFormat p_format, bool p_easy_mode = false) {
 	String main;
 	switch (p_format) {
 		case EditorVersionButton::FORMAT_BASIC: {
-			return VERSION_FULL_CONFIG;
+			main = VERSION_FULL_CONFIG;
 		} break;
 		case EditorVersionButton::FORMAT_WITH_BUILD: {
 			main = "v" VERSION_FULL_BUILD;
@@ -54,7 +56,29 @@ String _get_version_string(EditorVersionButton::VersionFormat p_format) {
 	if (!hash.is_empty()) {
 		hash = vformat(" [%s]", hash.left(9));
 	}
+
+	// Prefix with tilde when easy mode is active.
+	if (p_easy_mode) {
+		if (p_format == EditorVersionButton::FORMAT_BASIC) {
+			return "~" + main;
+		} else {
+			return "~" + main + hash;
+		}
+	}
 	return main + hash;
+}
+
+void EditorVersionButton::_click_timer_timeout() {
+	click_count = 0;
+}
+
+void EditorVersionButton::_update_version_text() {
+	bool easy_mode = EditorNode::get_singleton() && EditorNode::get_singleton()->is_easy_mode();
+	set_text(_get_version_string(format, easy_mode));
+}
+
+void EditorVersionButton::_on_easy_mode_changed(bool p_enabled) {
+	_update_version_text();
 }
 
 void EditorVersionButton::_notification(int p_what) {
@@ -62,12 +86,37 @@ void EditorVersionButton::_notification(int p_what) {
 		case NOTIFICATION_POSTINITIALIZE: {
 			// This can't be done in the constructor because theme cache is not ready yet.
 			set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
-			set_text(_get_version_string(format));
+			_update_version_text();
+
+			// Connect to easy_mode_changed signal.
+			if (EditorNode::get_singleton()) {
+				EditorNode::get_singleton()->connect("easy_mode_changed", callable_mp(this, &EditorVersionButton::_on_easy_mode_changed));
+			}
 		} break;
 	}
 }
 
 void EditorVersionButton::pressed() {
+	// Increment click counter for secret easy mode toggle.
+	click_count++;
+
+	if (click_timer) {
+		click_timer->stop();
+		click_timer->start();
+	}
+
+	if (click_count >= EASY_MODE_CLICK_COUNT) {
+		click_count = 0;
+		if (click_timer) {
+			click_timer->stop();
+		}
+		// Toggle easy mode.
+		if (EditorNode::get_singleton()) {
+			EditorNode::get_singleton()->set_easy_mode(!EditorNode::get_singleton()->is_easy_mode());
+		}
+		return;
+	}
+
 	DisplayServer::get_singleton()->clipboard_set(_get_version_string(FORMAT_WITH_BUILD));
 }
 
@@ -82,4 +131,11 @@ EditorVersionButton::EditorVersionButton(VersionFormat p_format) {
 		build_date = TTR("(unknown)");
 	}
 	set_tooltip_text(vformat(TTR("Git commit date: %s\nClick to copy the version information."), build_date));
+
+	// Setup click timer for easy mode secret toggle (2 second timeout).
+	click_timer = memnew(Timer);
+	click_timer->set_one_shot(true);
+	click_timer->set_wait_time(2.0);
+	click_timer->connect("timeout", callable_mp(this, &EditorVersionButton::_click_timer_timeout));
+	add_child(click_timer);
 }

@@ -246,6 +246,8 @@ private:
 
 	static EditorNode *singleton;
 
+	bool easy_mode = false;
+
 	EditorData editor_data;
 	EditorFolding editor_folding;
 	EditorSelectionHistory editor_history;
@@ -695,6 +697,9 @@ public:
 	bool is_editor_ready() const { return is_inside_tree() && !waiting_for_first_scan; }
 
 	static EditorNode *get_singleton() { return singleton; }
+
+	static bool is_easy_mode() { return singleton->easy_mode; }
+	static void set_easy_mode(bool p_enabled);
 
 	static EditorLog *get_log() { return singleton->log; }
 	static EditorData &get_editor_data() { return singleton->editor_data; }
