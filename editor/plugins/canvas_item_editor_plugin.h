@@ -199,6 +199,9 @@ private:
 	HScrollBar *h_scroll = nullptr;
 	VScrollBar *v_scroll = nullptr;
 
+	// Main toolbar container.
+	MarginContainer *toolbar_margin = nullptr;
+
 	// Used for secondary menu items which are displayed depending on the currently selected node
 	// (such as MeshInstance's "Mesh" menu).
 	PanelContainer *context_toolbar_panel = nullptr;
@@ -417,6 +420,7 @@ private:
 	bool _is_grid_visible() const;
 	void _prepare_grid_menu();
 	void _on_grid_menu_id_pressed(int p_id);
+	void _on_easy_mode_changed(bool p_enabled);
 
 public:
 	enum ThemePreviewMode {

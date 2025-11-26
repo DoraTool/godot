@@ -4114,6 +4114,12 @@ void CanvasItemEditor::_update_editor_settings() {
 	panner->setup_warped_panning(get_viewport(), EDITOR_GET("editors/panning/warped_mouse_panning"));
 }
 
+void CanvasItemEditor::_on_easy_mode_changed(bool p_enabled) {
+	if (toolbar_margin) {
+		toolbar_margin->set_visible(!p_enabled);
+	}
+}
+
 void CanvasItemEditor::_project_settings_changed() {
 	EditorNode::get_singleton()->get_scene_root()->set_snap_controls_to_pixels(GLOBAL_GET("gui/common/snap_controls_to_pixels"));
 }
@@ -4125,6 +4131,12 @@ void CanvasItemEditor::_notification(int p_what) {
 
 			SceneTreeDock::get_singleton()->get_tree_editor()->connect("node_changed", callable_mp(this, &CanvasItemEditor::_update_lock_and_group_button));
 			ProjectSettings::get_singleton()->connect("settings_changed", callable_mp(this, &CanvasItemEditor::_project_settings_changed));
+
+			// Connect to easy mode changes and apply initial state.
+			if (EditorNode::get_singleton()) {
+				EditorNode::get_singleton()->connect("easy_mode_changed", callable_mp(this, &CanvasItemEditor::_on_easy_mode_changed));
+				_on_easy_mode_changed(EditorNode::get_singleton()->is_easy_mode());
+			}
 		} break;
 
 		case NOTIFICATION_PROCESS: {
@@ -5165,7 +5177,12 @@ void CanvasItemEditor::set_state(const Dictionary &p_state) {
 }
 
 void CanvasItemEditor::clear() {
-	zoom = 1.0 / MAX(1, EDSCALE);
+	// In easy mode, default to 100% zoom for better visibility.
+	if (EditorNode::get_singleton() && EditorNode::get_singleton()->is_easy_mode()) {
+		zoom = 1.0 * MAX(1, EDSCALE);
+	} else {
+		zoom = 1.0 / MAX(1, EDSCALE);
+	}
 	zoom_widget->set_zoom(zoom);
 
 	view_offset = Point2(-150 - RULER_WIDTH, -95 - RULER_WIDTH);
@@ -5277,7 +5294,7 @@ CanvasItemEditor::CanvasItemEditor() {
 	// Add some margin to the sides for better aesthetics.
 	// This prevents the first button's hover/pressed effect from "touching" the panel's border,
 	// which looks ugly.
-	MarginContainer *toolbar_margin = memnew(MarginContainer);
+	toolbar_margin = memnew(MarginContainer);
 	toolbar_margin->add_theme_constant_override("margin_left", 4 * EDSCALE);
 	toolbar_margin->add_theme_constant_override("margin_right", 4 * EDSCALE);
 	add_child(toolbar_margin);
