@@ -44,6 +44,14 @@
 
 void EditorBottomPanel::_notification(int p_what) {
 	switch (p_what) {
+		case NOTIFICATION_READY: {
+			// Connect to easy mode changes and apply initial state.
+			if (EditorNode::get_singleton()) {
+				EditorNode::get_singleton()->connect("easy_mode_changed", callable_mp(this, &EditorBottomPanel::_on_easy_mode_changed));
+				_on_easy_mode_changed(EditorNode::get_singleton()->is_easy_mode());
+			}
+		} break;
+
 		case NOTIFICATION_THEME_CHANGED: {
 			pin_button->set_button_icon(get_editor_theme_icon(SNAME("Pin")));
 			expand_button->set_button_icon(get_editor_theme_icon(SNAME("ExpandBottomDock")));
@@ -62,6 +70,31 @@ void EditorBottomPanel::_notification(int p_what) {
 			}
 		} break;
 	}
+}
+
+void EditorBottomPanel::_on_easy_mode_changed(bool p_enabled) {
+	// In easy mode, only show essential panels for 2D tile editing.
+	static const char *easy_mode_allowed[] = {
+		// "Output",
+		"TileMap", "TileSet",
+		// "SpriteFrames",
+		nullptr
+	};
+
+	for (int i = 0; i < items.size(); i++) {
+		bool show = true;
+		if (p_enabled) {
+			show = false;
+			for (int j = 0; easy_mode_allowed[j] != nullptr; j++) {
+				if (items[i].name == easy_mode_allowed[j]) {
+					show = true;
+					break;
+				}
+			}
+		}
+		items[i].button->set_visible(show);
+	}
+	_update_scroll_buttons();
 }
 
 void EditorBottomPanel::_switch_by_control(bool p_visible, Control *p_control, bool p_ignore_lock) {

@@ -70,6 +70,7 @@ class EditorBottomPanel : public PanelContainer {
 	void _scroll(bool p_right);
 	void _update_scroll_buttons();
 	void _update_disabled_buttons();
+	void _on_easy_mode_changed(bool p_enabled);
 
 	bool _button_drag_hover(const Vector2 &, const Variant &, Button *p_button, Control *p_control);
 
