@@ -88,8 +88,8 @@ void EditorVersionButton::_notification(int p_what) {
 			set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 			_update_version_text();
 
-			// Connect to easy_mode_changed signal.
-			if (EditorNode::get_singleton()) {
+			// Connect to easy_mode_changed signal (only in editor, not ProjectManager).
+			if (EditorNode::get_singleton() && EditorNode::get_singleton()->has_signal("easy_mode_changed")) {
 				EditorNode::get_singleton()->connect("easy_mode_changed", callable_mp(this, &EditorVersionButton::_on_easy_mode_changed));
 			}
 		} break;
