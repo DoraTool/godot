@@ -664,6 +664,18 @@ void EditorDockManager::close_dock(Control *p_dock) {
 	_update_layout();
 }
 
+void EditorDockManager::close_all_docks() {
+	for (const KeyValue<Control *, DockInfo> &dock : all_docks) {
+		if (!dock.value.open || !dock.value.enabled) {
+			continue;
+		}
+		_move_dock(dock.key, closed_dock_parent);
+		all_docks[dock.key].open = false;
+		dock.key->hide();
+	}
+	_update_layout();
+}
+
 void EditorDockManager::open_dock(Control *p_dock, bool p_set_current) {
 	ERR_FAIL_NULL(p_dock);
 	ERR_FAIL_COND_MSG(!all_docks.has(p_dock), vformat("Cannot open unknown dock '%s'.", p_dock->get_name()));

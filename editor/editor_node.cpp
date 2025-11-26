@@ -356,6 +356,17 @@ void EditorNode::set_easy_mode(bool p_enabled) {
 		singleton->title_bar->set_visible(!p_enabled);
 	}
 
+	// Apply the appropriate dock layout.
+	if (singleton->editor_dock_manager) {
+		// Close all docks first to reset the layout completely.
+		singleton->editor_dock_manager->close_all_docks();
+		if (p_enabled && singleton->easy_mode_layout.is_valid()) {
+			singleton->editor_dock_manager->load_docks_from_config(singleton->easy_mode_layout, "docks");
+		} else if (!p_enabled && singleton->default_layout.is_valid()) {
+			singleton->editor_dock_manager->load_docks_from_config(singleton->default_layout, "docks");
+		}
+	}
+
 	singleton->emit_signal(SNAME("easy_mode_changed"), p_enabled);
 }
 
@@ -7775,6 +7786,7 @@ EditorNode::EditorNode() {
 
 	const String docks_section = "docks";
 	default_layout.instantiate();
+
 	// Dock numbers are based on DockSlot enum value + 1.
 	default_layout->set_value(docks_section, "dock_3", "Scene,Import");
 	default_layout->set_value(docks_section, "dock_4", "FileSystem,Scenes");
@@ -7788,6 +7800,19 @@ EditorNode::EditorNode() {
 	default_layout->set_value(docks_section, "dock_hsplit_2", 270);
 	default_layout->set_value(docks_section, "dock_hsplit_3", -270);
 	default_layout->set_value(docks_section, "dock_hsplit_4", 0);
+
+	// Define easy mode layout - simpler with fewer docks.
+	easy_mode_layout.instantiate();
+	easy_mode_layout->set_value(docks_section, "dock_3", "Scene");
+	easy_mode_layout->set_value(docks_section, "dock_4", "Scenes");
+	// Set split offsets.
+	for (int i = 0; i < editor_dock_manager->get_vsplit_count(); i++) {
+		easy_mode_layout->set_value(docks_section, "dock_split_" + itos(i + 1), 0);
+	}
+	easy_mode_layout->set_value(docks_section, "dock_hsplit_1", 0);
+	easy_mode_layout->set_value(docks_section, "dock_hsplit_2", 270);
+	easy_mode_layout->set_value(docks_section, "dock_hsplit_3", 0);
+	easy_mode_layout->set_value(docks_section, "dock_hsplit_4", 0);
 
 	_update_layouts_menu();
 

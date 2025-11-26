@@ -147,6 +147,7 @@ public:
 
 	void set_dock_enabled(Control *p_dock, bool p_enabled);
 	void close_dock(Control *p_dock);
+	void close_all_docks();
 	void open_dock(Control *p_dock, bool p_set_current = true);
 	void focus_dock(Control *p_dock);
 

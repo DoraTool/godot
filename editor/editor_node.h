@@ -370,6 +370,7 @@ private:
 
 	int overridden_default_layout = -1;
 	Ref<ConfigFile> default_layout;
+	Ref<ConfigFile> easy_mode_layout;
 	PopupMenu *editor_layouts = nullptr;
 	EditorLayoutsDialog *layout_dialog = nullptr;
 
