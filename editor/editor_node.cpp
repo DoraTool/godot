@@ -351,9 +351,9 @@ void EditorNode::set_easy_mode(bool p_enabled) {
 	EditorSettings::get_singleton()->set("interface/editor/easy_mode", p_enabled);
 	EditorSettings::get_singleton()->save();
 
-	// Hide/show main menu bar based on easy mode.
-	if (singleton->main_menu) {
-		singleton->main_menu->set_visible(!p_enabled);
+	// Hide/show entire title bar based on easy mode.
+	if (singleton->title_bar) {
+		singleton->title_bar->set_visible(!p_enabled);
 	}
 
 	singleton->emit_signal(SNAME("easy_mode_changed"), p_enabled);
@@ -8194,7 +8194,7 @@ EditorNode::EditorNode() {
 	// Load easy mode state from settings.
 	easy_mode = EDITOR_GET("interface/editor/easy_mode");
 	if (easy_mode) {
-		main_menu->set_visible(false);
+		title_bar->set_visible(false);
 	}
 }
 
