@@ -224,6 +224,26 @@ const Engine = (function () {
 			},
 
 			/**
+			 * Read a file from the instance's virtual file system.
+			 *
+			 * @param {string} path The path to the file to read.
+			 * @returns {Uint8Array|null} The file contents, or null if the file doesn't exist.
+			 */
+			readFile: function (path) {
+				if (this.rtenv == null) {
+					throw new Error('Engine must be inited before reading files');
+				}
+				try {
+					return this.rtenv['FS'].readFile(path);
+				} catch (e) {
+					if (e.code === 'ENOENT') {
+						return null;
+					}
+					throw e;
+				}
+			},
+
+			/**
 			 * Request that the current instance quit.
 			 *
 			 * This is akin the user pressing the close button in the window manager, and will
@@ -427,6 +447,33 @@ const Engine = (function () {
 				this._saveCallback = null;
 				this.rtenv._godot_js_remove_save_listener();
 			},
+
+			/**
+			 * Reload cached resources from the virtual filesystem.
+			 * This triggers hot-reload for scripts and resources, updating all instances.
+			 * Only available in debug builds after the engine is initialized.
+			 *
+			 * @param {string[]} paths - Array of resource paths to reload (e.g., ["res://player.gd", "res://main.tscn"])
+			 */
+			reloadCachedFiles: function (paths) {
+				if (!this.rtenv) {
+					throw new Error('Engine must be initialized before reloading files');
+				}
+				if (!Array.isArray(paths)) {
+					throw new Error('paths must be an array of strings');
+				}
+				const Module = this.rtenv;
+				if (!Module._godot_js_reload_cached_files) {
+					throw new Error('Reload API not available (requires debug build)');
+				}
+				const pathsJson = JSON.stringify(paths);
+				const pathsPtr = Module.allocString(pathsJson);
+				try {
+					Module._godot_js_reload_cached_files(pathsPtr);
+				} finally {
+					Module._free(pathsPtr);
+				}
+			},
 		};
 
 		Engine.prototype = proto;
@@ -436,12 +483,14 @@ const Engine = (function () {
 		Engine.prototype['start'] = Engine.prototype.start;
 		Engine.prototype['startGame'] = Engine.prototype.startGame;
 		Engine.prototype['copyToFS'] = Engine.prototype.copyToFS;
+		Engine.prototype['readFile'] = Engine.prototype.readFile;
 		Engine.prototype['requestQuit'] = Engine.prototype.requestQuit;
 		Engine.prototype['installServiceWorker'] = Engine.prototype.installServiceWorker;
 		Engine.prototype['exportPack'] = Engine.prototype.exportPack;
 		Engine.prototype['exportPackPatch'] = Engine.prototype.exportPackPatch;
 		Engine.prototype['onSave'] = Engine.prototype.onSave;
 		Engine.prototype['offSave'] = Engine.prototype.offSave;
+		Engine.prototype['reloadCachedFiles'] = Engine.prototype.reloadCachedFiles;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;

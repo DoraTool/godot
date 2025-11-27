@@ -366,6 +366,27 @@ export declare class Engine {
      */
     offSave(): void;
 
+    /**
+     * Reload cached resources from the virtual filesystem.
+     * This triggers hot-reload for scripts and resources, updating all instances.
+     * Only available in debug builds after the engine is initialized.
+     * 
+     * Scripts (.gd, .cs) are recompiled and all instances are updated with state preserved.
+     * Scenes (.tscn) - new instances will use the updated version.
+     * Other resources (textures, audio, shaders) are immediately reflected.
+     * 
+     * @param paths Array of resource paths to reload (e.g., ["res://player.gd", "res://main.tscn"])
+     * @throws Error if engine not initialized or API not available
+     * 
+     * @example
+     * ```javascript
+     * // Update file and hot-reload
+     * game.copyToFS('res://player.gd', newScriptBuffer);
+     * game.reloadCachedFiles(['res://player.gd']);
+     * ```
+     */
+    reloadCachedFiles(paths: string[]): void;
+
     // Static methods
 
     /**
@@ -503,6 +524,30 @@ export interface SaveEvent {
  * Callback function for save events.
  */
 export type SaveEventListener = (event: SaveEvent) => void;
+
+// ============================================================================
+// Hot Reload API
+// ============================================================================
+
+/**
+ * The Engine class method for hot-reloading cached resources.
+ * This is available on Engine instances and triggers resource reload in the running game.
+ * 
+ * @example
+ * ```javascript
+ * // Reload a script after modifying it
+ * game.copyToFS('res://player.gd', newScriptData);
+ * game.reloadCachedFiles(['res://player.gd']);
+ * 
+ * // Reload multiple resources
+ * game.reloadCachedFiles(['res://player.gd', 'res://enemy.gd', 'res://main.tscn']);
+ * ```
+ * 
+ * Supported resource types:
+ * - Scripts (.gd, .cs) - Recompiles and updates all instances, preserving state
+ * - Scenes (.tscn, .scn) - New instances use updated version
+ * - Textures, Audio, Shaders - Immediately reflected in running game
+ */
 
 // ============================================================================
 // Global Window Augmentation

@@ -625,6 +625,33 @@ function startEditor(zip) {
 		},
 	};
 
+	// Hot reload: listen for save events from editor and reload in running game
+	function setupHotReload() {
+		console.log('Setting up hot reload...');
+
+		editor.onSave(function (event) {
+			console.log('on save: ', event);
+			if (!game) {
+				return; // No game running
+			}
+			try {
+				// Editor and game share the same virtual filesystem (IndexedDB).
+				// When editor saves, the file is already updated on "disk".
+				// We just need to tell the game to reload it from cache.
+				const resPath = event.path;
+				if (!resPath.startsWith('res://')) {
+					return;
+				}
+
+				// Trigger hot reload in the game
+				game.reloadCachedFiles([resPath]);
+				console.log('[Hot Reload] Reloaded:', resPath);
+			} catch (e) {
+				console.error('[Hot Reload] Error:', e);
+			}
+		});
+	}
+
 	let OnEditorExit = function () {
 		showTab('loader');
 		setLoaderEnabled(true);
@@ -740,6 +767,7 @@ function startEditor(zip) {
 			editor.start({ 'args': args, 'persistentDrops': true }).then(function () {
 				setStatusMode('hidden');
 				initializing = false;
+				setupHotReload();
 			});
 		}).catch(displayFailureNotice);
 	}

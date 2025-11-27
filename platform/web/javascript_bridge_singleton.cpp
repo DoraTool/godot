@@ -45,6 +45,11 @@
 #include "editor/export/editor_export.h"
 #endif // TOOLS_ENABLED
 
+#ifdef DEBUG_ENABLED
+#include "core/io/json.h"
+#include "scene/debugger/scene_debugger.h"
+#endif // DEBUG_ENABLED
+
 extern "C" {
 extern void godot_js_os_download_buffer(const uint8_t *p_buf, int p_buf_size, const char *p_name, const char *p_mime);
 }
@@ -675,6 +680,33 @@ void godot_js_remove_save_listener() {
 		return;
 	}
 	bridge->remove_save_listener();
+#endif
+}
+
+EMSCRIPTEN_KEEPALIVE
+void godot_js_reload_cached_files(const char *p_paths_json) {
+#ifdef DEBUG_ENABLED
+	String json_str = String::utf8(p_paths_json);
+	JSON json;
+	Error err = json.parse(json_str);
+	if (err != OK) {
+		ERR_PRINT("Failed to parse paths JSON for reload_cached_files");
+		return;
+	}
+
+	Variant result = json.get_data();
+	if (result.get_type() != Variant::ARRAY) {
+		ERR_PRINT("reload_cached_files expects a JSON array of paths");
+		return;
+	}
+
+	Array paths_array = result;
+	PackedStringArray paths;
+	for (int i = 0; i < paths_array.size(); i++) {
+		paths.push_back(paths_array[i]);
+	}
+
+	SceneDebugger::reload_cached_files(paths);
 #endif
 }
 } // extern "C"
