@@ -628,24 +628,18 @@ function startEditor(zip) {
 	// Hot reload: listen for save events from editor and reload in running game
 	function setupHotReload() {
 		console.log('Setting up hot reload...');
-
-		editor.onSave(function (event) {
-			console.log('on save: ', event);
+		editor.onSave(async function (type, path) {
+			console.log('on save: ', type, path);
 			if (!game) {
 				return; // No game running
 			}
 			try {
-				// Editor and game share the same virtual filesystem (IndexedDB).
-				// When editor saves, the file is already updated on "disk".
-				// We just need to tell the game to reload it from cache.
-				const resPath = event.path;
-				if (!resPath.startsWith('res://')) {
-					return;
-				}
+				// Reload the current scene in the game
+				await editor.syncToDB();
+				await game.syncFromDB();
 
-				// Trigger hot reload in the game
-				game.reloadCachedFiles([resPath]);
-				console.log('[Hot Reload] Reloaded:', resPath);
+				game.reloadCurrentScene();
+				console.log('[Hot Reload] Scene reloaded');
 			} catch (e) {
 				console.error('[Hot Reload] Error:', e);
 			}
@@ -675,6 +669,7 @@ function startEditor(zip) {
 			}
 			setGameTabEnabled(true);
 			game = new Engine(gameConfig);
+			window.game = game;
 			showTab('game');
 			game.init().then(function () {
 				requestAnimationFrame(function () {
@@ -693,7 +688,9 @@ function startEditor(zip) {
 							showTab('loader');
 							setLoaderEnabled(true);
 						};
-						editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
+						editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas }).then(function () {
+							setupHotReload();
+						});
 					});
 				}, 0);
 				OnEditorExit = null;
@@ -729,6 +726,7 @@ function startEditor(zip) {
 		'persistentPaths': persistentPaths,
 	};
 	editor = new Engine(editorConfig);
+	window.editor = editor;
 
 	function displayFailureNotice(err) {
 		console.error(err);
@@ -767,7 +765,6 @@ function startEditor(zip) {
 			editor.start({ 'args': args, 'persistentDrops': true }).then(function () {
 				setStatusMode('hidden');
 				initializing = false;
-				setupHotReload();
 			});
 		}).catch(displayFailureNotice);
 	}

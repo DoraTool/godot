@@ -112,12 +112,15 @@ const GodotFS = {
 	$GodotFS__postset: [
 		'Module["initFS"] = GodotFS.init;',
 		'Module["copyToFS"] = GodotFS.copy_to_fs;',
+		'Module["readFromFS"] = GodotFS.read_from_fs;',
+		'Module["syncToDB"] = GodotFS.sync_to_db;',
+		'Module["syncFromDB"] = GodotFS.sync_from_db;',
 	].join(''),
 	$GodotFS: {
 		// ERRNO_CODES works every odd version of emscripten, but this will break too eventually.
 		ENOENT: 44,
 		_idbfs: false,
-		_syncing: false,
+		_sync_promise: null,
 		_mount_points: [],
 
 		is_persistent: function () {
@@ -183,24 +186,60 @@ const GodotFS = {
 			});
 			GodotFS._mount_points = [];
 			GodotFS._idbfs = false;
-			GodotFS._syncing = false;
+			GodotFS._sync_promise = null;
 		},
 
 		sync: function () {
-			if (GodotFS._syncing) {
-				GodotRuntime.error('Already syncing!');
-				return Promise.resolve();
+			if (GodotFS._sync_promise) {
+				return GodotFS._sync_promise;
 			}
-			GodotFS._syncing = true;
-			return new Promise(function (resolve, reject) {
+			const promise = new Promise(function (resolve, reject) {
 				FS.syncfs(false, function (error) {
 					if (error) {
 						GodotRuntime.error(`Failed to save IDB file system: ${error.message}`);
 					}
-					GodotFS._syncing = false;
+					GodotFS._sync_promise = null;
 					resolve(error);
 				});
 			});
+			GodotFS._sync_promise = promise;
+			return promise;
+		},
+
+		// Sync file system from memory to IndexedDB (write sync).
+		sync_to_db: function () {
+			if (GodotFS._sync_promise) {
+				return GodotFS._sync_promise;
+			}
+			const promise = new Promise(function (resolve, reject) {
+				FS.syncfs(false, function (error) {
+					if (error) {
+						GodotRuntime.error(`Failed to sync file system to IndexedDB: ${error.message}`);
+					}
+					GodotFS._sync_promise = null;
+					resolve(error);
+				});
+			});
+			GodotFS._sync_promise = promise;
+			return promise;
+		},
+
+		// Sync file system from IndexedDB to memory (read sync).
+		sync_from_db: function () {
+			if (GodotFS._sync_promise) {
+				return GodotFS._sync_promise;
+			}
+			const promise = new Promise(function (resolve, reject) {
+				FS.syncfs(true, function (error) {
+					if (error) {
+						GodotRuntime.error(`Failed to sync file system from IndexedDB: ${error.message}`);
+					}
+					GodotFS._sync_promise = null;
+					resolve(error);
+				});
+			});
+			GodotFS._sync_promise = promise;
+			return promise;
 		},
 
 		// Copies a buffer to the internal file system. Creating directories recursively.
@@ -221,6 +260,20 @@ const GodotFS = {
 			}
 			FS.writeFile(path, new Uint8Array(buffer));
 		},
+
+		// Reads a file from the internal file system.
+		read_from_fs: function (path) {
+			try {
+				return FS.readFile(path);
+			} catch (e) {
+				if (e.errno === GodotFS.ENOENT) {
+					// File doesn't exist, return null
+					return null;
+				}
+				// Re-throw other errors
+				throw e;
+			}
+		},
 	},
 };
 mergeInto(LibraryManager.library, GodotFS);
@@ -233,7 +286,7 @@ const GodotOS = {
 		'GodotOS._fs_sync_promise = Promise.resolve();',
 	].join(''),
 	$GodotOS: {
-		request_quit: function () {},
+		request_quit: function () { },
 		_async_cbs: [],
 		_fs_sync_promise: null,
 

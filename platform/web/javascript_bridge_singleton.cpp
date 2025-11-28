@@ -580,19 +580,12 @@ void JavaScriptBridge::_on_scene_saved(const String &p_path) {
 		return;
 	}
 
-	Dictionary event;
-	event["type"] = "scene";
-	event["path"] = p_path;
-
-	Variant event_var = event;
-	const Variant *args[] = { &event_var };
+	Variant null_this;
+	Variant type_var = String("scene");
+	Variant path_var = p_path;
+	const Variant *args[] = { &null_this, &type_var, &path_var };
 	Callable::CallError error;
-	// Call the JavaScript function directly (empty method name for function invocation)
-	save_listener_callback->callp(StringName(), args, 1, error);
-	if (error.error != Callable::CallError::CALL_OK) {
-		// Fallback: try calling as a method
-		save_listener_callback->callp("call", args, 1, error);
-	}
+	save_listener_callback->callp("call", args, 3, error);
 }
 
 void JavaScriptBridge::_on_resource_saved(const Ref<Resource> &p_resource) {
@@ -600,20 +593,12 @@ void JavaScriptBridge::_on_resource_saved(const Ref<Resource> &p_resource) {
 		return;
 	}
 
-	Dictionary event;
-	event["type"] = "resource";
-	event["path"] = p_resource->get_path();
-	event["resourceType"] = p_resource->get_class();
-
-	Variant event_var = event;
-	const Variant *args[] = { &event_var };
+	Variant null_this;
+	Variant type_var = String("resource");
+	Variant path_var = p_resource->get_path();
+	const Variant *args[] = { &null_this, &type_var, &path_var };
 	Callable::CallError error;
-	// Call the JavaScript function directly (empty method name for function invocation)
-	save_listener_callback->callp(StringName(), args, 1, error);
-	if (error.error != Callable::CallError::CALL_OK) {
-		// Fallback: try calling as a method
-		save_listener_callback->callp("call", args, 1, error);
-	}
+	save_listener_callback->callp("call", args, 3, error);
 }
 
 extern "C" {
@@ -683,32 +668,48 @@ void godot_js_remove_save_listener() {
 #endif
 }
 
-EMSCRIPTEN_KEEPALIVE
-void godot_js_reload_cached_files(const char *p_paths_json) {
-#ifdef DEBUG_ENABLED
-	String json_str = String::utf8(p_paths_json);
-	JSON json;
-	Error err = json.parse(json_str);
-	if (err != OK) {
-		ERR_PRINT("Failed to parse paths JSON for reload_cached_files");
-		return;
-	}
-
-	Variant result = json.get_data();
-	if (result.get_type() != Variant::ARRAY) {
-		ERR_PRINT("reload_cached_files expects a JSON array of paths");
-		return;
-	}
-
-	Array paths_array = result;
-	PackedStringArray paths;
-	for (int i = 0; i < paths_array.size(); i++) {
-		paths.push_back(paths_array[i]);
-	}
-
-	SceneDebugger::reload_cached_files(paths);
-#endif
-}
 } // extern "C"
 
 #endif // TOOLS_ENABLED
+
+#include "core/config/project_settings.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
+#include "core/io/resource.h"
+#include "core/io/resource_loader.h"
+#include "scene/main/scene_tree.h"
+#include "scene/resources/packed_scene.h"
+
+extern "C" {
+EMSCRIPTEN_KEEPALIVE
+void godot_js_reload_current_scene() {
+	print_line("[Hot Reload] Starting scene reload process...");
+
+	SceneTree *tree = SceneTree::get_singleton();
+	if (!tree) {
+		ERR_PRINT("[Hot Reload] Cannot reload scene: SceneTree singleton not available.");
+		return;
+	}
+
+	print_line("[Hot Reload] Reloading current scene tree...");
+	Node *current_scene = tree->get_current_scene();
+	if (!current_scene) {
+		print_line("[Hot Reload] No current scene set, skipping scene tree reload.");
+		return;
+	}
+
+	String current_scene_path = current_scene->get_scene_file_path();
+	if (current_scene_path.is_empty()) {
+		print_line("[Hot Reload] Current scene has no file path, skipping scene tree reload.");
+		return;
+	}
+
+	Error err = tree->reload_current_scene();
+	if (err != OK) {
+		ERR_PRINT(vformat("[Hot Reload] Failed to reload current scene '%s': %s", current_scene_path, error_names[err]));
+		return;
+	}
+
+	print_line("[Hot Reload] Scene reload process completed.");
+}
+} // extern "C"

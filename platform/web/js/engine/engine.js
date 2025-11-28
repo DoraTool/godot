@@ -234,13 +234,44 @@ const Engine = (function () {
 					throw new Error('Engine must be inited before reading files');
 				}
 				try {
-					return this.rtenv['FS'].readFile(path);
+					return this.rtenv['readFromFS'](path);
 				} catch (e) {
-					if (e.code === 'ENOENT') {
-						return null;
-					}
+					// readFromFS already handles ENOENT by returning null,
+					// but we keep try-catch for any other unexpected errors
 					throw e;
 				}
+			},
+
+			/**
+			 * Sync file system from memory to IndexedDB (write sync).
+			 * This ensures files written to the in-memory file system are persisted to IndexedDB.
+			 *
+			 * @returns {Promise<Error|null>} Promise that resolves with an Error if sync failed, or null on success.
+			 */
+			syncToDB: function () {
+				if (this.rtenv == null) {
+					throw new Error('Engine must be inited before syncing');
+				}
+				if (!this.rtenv['syncToDB']) {
+					throw new Error('Sync API not available');
+				}
+				return this.rtenv['syncToDB']();
+			},
+
+			/**
+			 * Sync file system from IndexedDB to memory (read sync).
+			 * This refreshes the in-memory file system with the latest data from IndexedDB.
+			 *
+			 * @returns {Promise<Error|null>} Promise that resolves with an Error if sync failed, or null on success.
+			 */
+			syncFromDB: function () {
+				if (this.rtenv == null) {
+					throw new Error('Engine must be inited before syncing');
+				}
+				if (!this.rtenv['syncFromDB']) {
+					throw new Error('Sync API not available');
+				}
+				return this.rtenv['syncFromDB']();
 			},
 
 			/**
@@ -449,30 +480,18 @@ const Engine = (function () {
 			},
 
 			/**
-			 * Reload cached resources from the virtual filesystem.
-			 * This triggers hot-reload for scripts and resources, updating all instances.
-			 * Only available in debug builds after the engine is initialized.
-			 *
-			 * @param {string[]} paths - Array of resource paths to reload (e.g., ["res://player.gd", "res://main.tscn"])
+			 * Reload the current scene.
+			 * This triggers a full scene reload, useful for hot-reload during development.
 			 */
-			reloadCachedFiles: function (paths) {
+			reloadCurrentScene: function () {
 				if (!this.rtenv) {
-					throw new Error('Engine must be initialized before reloading files');
-				}
-				if (!Array.isArray(paths)) {
-					throw new Error('paths must be an array of strings');
+					throw new Error('Engine must be initialized before reloading');
 				}
 				const Module = this.rtenv;
-				if (!Module._godot_js_reload_cached_files) {
-					throw new Error('Reload API not available (requires debug build)');
+				if (!Module._godot_js_reload_current_scene) {
+					throw new Error('Reload API not available');
 				}
-				const pathsJson = JSON.stringify(paths);
-				const pathsPtr = Module.allocString(pathsJson);
-				try {
-					Module._godot_js_reload_cached_files(pathsPtr);
-				} finally {
-					Module._free(pathsPtr);
-				}
+				Module._godot_js_reload_current_scene();
 			},
 		};
 
@@ -484,13 +503,15 @@ const Engine = (function () {
 		Engine.prototype['startGame'] = Engine.prototype.startGame;
 		Engine.prototype['copyToFS'] = Engine.prototype.copyToFS;
 		Engine.prototype['readFile'] = Engine.prototype.readFile;
+		Engine.prototype['syncToDB'] = Engine.prototype.syncToDB;
+		Engine.prototype['syncFromDB'] = Engine.prototype.syncFromDB;
 		Engine.prototype['requestQuit'] = Engine.prototype.requestQuit;
 		Engine.prototype['installServiceWorker'] = Engine.prototype.installServiceWorker;
 		Engine.prototype['exportPack'] = Engine.prototype.exportPack;
 		Engine.prototype['exportPackPatch'] = Engine.prototype.exportPackPatch;
 		Engine.prototype['onSave'] = Engine.prototype.onSave;
 		Engine.prototype['offSave'] = Engine.prototype.offSave;
-		Engine.prototype['reloadCachedFiles'] = Engine.prototype.reloadCachedFiles;
+		Engine.prototype['reloadCurrentScene'] = Engine.prototype.reloadCurrentScene;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;

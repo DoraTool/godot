@@ -318,6 +318,22 @@ export declare class Engine {
     copyToFS(path: string, buffer: ArrayBuffer | ArrayBufferView): void;
 
     /**
+     * Sync file system from memory to IndexedDB (write sync).
+     * This ensures files written to the in-memory file system are persisted to IndexedDB.
+     * 
+     * @returns Promise that resolves with an Error if sync failed, or null on success.
+     */
+    syncToDB(): Promise<Error | null>;
+
+    /**
+     * Sync file system from IndexedDB to memory (read sync).
+     * This refreshes the in-memory file system with the latest data from IndexedDB.
+     * 
+     * @returns Promise that resolves with an Error if sync failed, or null on success.
+     */
+    syncFromDB(): Promise<Error | null>;
+
+    /**
      * Request that the current instance quit.
      * 
      * This is akin the user pressing the close button in the window manager, and will
