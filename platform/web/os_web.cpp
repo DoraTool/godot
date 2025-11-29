@@ -35,6 +35,7 @@
 #include "godot_js.h"
 #include "ip_web.h"
 #include "net_socket_web.h"
+#include "platform/web/debugger/remote_debugger_peer_web.h"
 
 #include "core/config/project_settings.h"
 #include "core/debugger/engine_debugger.h"
@@ -58,6 +59,7 @@ void OS_Web::initialize() {
 	IPWeb::make_default();
 	NetSocketWeb::make_default();
 	DisplayServerWeb::register_web_driver();
+	EngineDebugger::register_uri_handler("web://", RemoteDebuggerPeerWeb::create);
 }
 
 void OS_Web::resume_audio() {

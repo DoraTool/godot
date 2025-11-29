@@ -271,15 +271,22 @@ Error EditorDebuggerNode::start(const String &p_uri) {
 		return ERR_UNAVAILABLE;
 	}
 
-	ERR_FAIL_COND_V(!p_uri.contains("://"), ERR_INVALID_PARAMETER);
-	if (keep_open && current_uri == p_uri && server.is_valid()) {
+	String uri = p_uri;
+#ifdef WEB_ENABLED
+	if (uri == "tcp://") {
+		uri = "web://";
+	}
+#endif
+
+	ERR_FAIL_COND_V(!uri.contains("://"), ERR_INVALID_PARAMETER);
+	if (keep_open && current_uri == uri && server.is_valid()) {
 		return OK;
 	}
 	stop(true);
-	current_uri = p_uri;
+	current_uri = uri;
 
-	server = Ref<EditorDebuggerServer>(EditorDebuggerServer::create(p_uri.substr(0, p_uri.find("://") + 3)));
-	const Error err = server->start(p_uri);
+	server = Ref<EditorDebuggerServer>(EditorDebuggerServer::create(uri.substr(0, uri.find("://") + 3)));
+	const Error err = server->start(uri);
 	if (err != OK) {
 		return err;
 	}

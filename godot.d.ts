@@ -403,6 +403,41 @@ export declare class Engine {
      */
     reloadCachedFiles(paths: string[]): void;
 
+    /**
+     * Start the editor's debug server on the specified channel.
+     * This allows external game instances to connect for live debugging.
+     * Only available in editor builds after the engine is initialized.
+     * 
+     * @param channel The channel name for the debug connection. Defaults to "default".
+     * @returns 0 on success, non-zero on error:
+     *          -1 if not available (non-editor build),
+     *          1 if editor not initialized,
+     *          2 if server failed to start.
+     * 
+     * @example
+     * ```javascript
+     * // Start debug server on default channel
+     * editor.startDebugServer();
+     * 
+     * // Start debug server on a specific channel
+     * editor.startDebugServer("my-project");
+     * 
+     * // Game connects with: --remote-debug web://my-project
+     * ```
+     */
+    startDebugServer(channel?: string): number;
+
+    /**
+     * Stop the editor's debug server.
+     * Only available in editor builds.
+     * 
+     * @example
+     * ```javascript
+     * editor.stopDebugServer();
+     * ```
+     */
+    stopDebugServer(): void;
+
     // Static methods
 
     /**

@@ -421,6 +421,246 @@ const GodotOS = {
 autoAddDeps(GodotOS, '$GodotOS');
 mergeInto(LibraryManager.library, GodotOS);
 
+const GodotLiveDebug = {
+	$GodotLiveDebug__deps: ['$GodotRuntime'],
+	$GodotLiveDebug__postset: [
+		'Module["startDebugServer"] = GodotLiveDebug.start_debug_server;',
+		'Module["stopDebugServer"] = GodotLiveDebug.stop_debug_server;',
+	].join(''),
+	$GodotLiveDebug: {
+		// Start the editor's debug server from JavaScript.
+		// Usage: Module.startDebugServer("channel_name") or Module.startDebugServer() for default channel.
+		// Returns 0 on success, non-zero on error.
+		start_debug_server: function (channel) {
+			const channelName = channel || 'default';
+			if (!Module._godot_js_editor_start_debug_server) {
+				GodotRuntime.error('startDebugServer is only available in the editor build');
+				return -1;
+			}
+			const ptr = GodotRuntime.allocString(channelName);
+			const result = Module._godot_js_editor_start_debug_server(ptr);
+			GodotRuntime.free(ptr);
+			return result;
+		},
+
+		// Stop the editor's debug server.
+		stop_debug_server: function () {
+			if (!Module._godot_js_editor_stop_debug_server) {
+				GodotRuntime.error('stopDebugServer is only available in the editor build');
+				return;
+			}
+			Module._godot_js_editor_stop_debug_server();
+		},
+
+		// Called during registration (in the module's own JS context) to capture
+		// memory functions that are only available as globals in each module scope.
+		_capture_module_helpers: function (module) {
+			// Capture the global heap and memory functions from this module's scope.
+			// These closures will retain references to the correct HEAPU8/_malloc/_free
+			// for this specific WASM instance.
+			module.__godotLiveDebugRead = function (ptr, len) {
+				return HEAPU8.slice(ptr, ptr + len);
+			};
+			module.__godotLiveDebugWrite = function (ptr, data) {
+				HEAPU8.set(data, ptr);
+			};
+			module.__godotLiveDebugMalloc = function (size) {
+				return _malloc(size);
+			};
+			module.__godotLiveDebugFree = function (ptr) {
+				_free(ptr);
+			};
+		},
+		_get_bus: function () {
+			if (!globalThis.__GodotLiveDebugBus) {
+				globalThis.__GodotLiveDebugBus = {
+					channels: Object.create(null),
+				};
+			}
+			return globalThis.__GodotLiveDebugBus;
+		},
+
+		_get_channel: function (name) {
+			const channelName = name || 'default';
+			const bus = GodotLiveDebug._get_bus();
+			if (!bus.channels[channelName]) {
+				bus.channels[channelName] = {
+					name: channelName,
+					endpoints: [],
+				};
+			}
+			return bus.channels[channelName];
+		},
+
+		_store_endpoint: function (module, endpoint) {
+			if (!module.__godotLiveDebugEndpoints) {
+				module.__godotLiveDebugEndpoints = Object.create(null);
+			}
+			module.__godotLiveDebugEndpoints[endpoint.handle] = endpoint;
+		},
+
+		_get_endpoint: function (module, handle) {
+			if (!module.__godotLiveDebugEndpoints) {
+				return null;
+			}
+			return module.__godotLiveDebugEndpoints[handle] || null;
+		},
+
+		_remove_endpoint: function (module, handle) {
+			if (!module.__godotLiveDebugEndpoints) {
+				return null;
+			}
+			const endpoint = module.__godotLiveDebugEndpoints[handle];
+			delete module.__godotLiveDebugEndpoints[handle];
+			return endpoint || null;
+		},
+
+		_emit_event: function (endpoint, code) {
+			const module = endpoint.module;
+			if (module && module._godot_js_live_debug_on_event) {
+				module._godot_js_live_debug_on_event(endpoint.handle, code);
+			}
+		},
+
+		_disconnect_endpoint: function (endpoint) {
+			if (!endpoint) {
+				return;
+			}
+			if (endpoint.partner) {
+				const partner = endpoint.partner;
+				endpoint.partner = null;
+				endpoint.connected = false;
+				partner.partner = null;
+				partner.connected = false;
+				GodotLiveDebug._emit_event(partner, 2);
+			}
+		},
+
+		_try_connect: function (channel) {
+			if (!channel || channel.endpoints.length < 2) {
+				return;
+			}
+			let server = null;
+			let client = null;
+			for (let i = 0; i < channel.endpoints.length; i++) {
+				const endpoint = channel.endpoints[i];
+				if (endpoint.partner) {
+					continue;
+				}
+				if (endpoint.isServer && !server) {
+					server = endpoint;
+				} else if (!endpoint.isServer && !client) {
+					client = endpoint;
+				}
+				if (server && client) {
+					break;
+				}
+			}
+			if (server && client) {
+				server.partner = client;
+				client.partner = server;
+				server.connected = true;
+				client.connected = true;
+				GodotLiveDebug._emit_event(server, 1);
+				GodotLiveDebug._emit_event(client, 1);
+			}
+		},
+
+		_register_peer: function (module, channelName, isServer) {
+			// Capture module helpers at registration time - this is called from
+			// within the module's own JS context, so globals like HEAPU8/_malloc
+			// will be captured correctly for this specific WASM instance.
+			GodotLiveDebug._capture_module_helpers(module);
+			const channel = GodotLiveDebug._get_channel(channelName);
+			module.__godotLiveDebugHandleSeed = (module.__godotLiveDebugHandleSeed || 0) + 1;
+			const endpoint = {
+				handle: module.__godotLiveDebugHandleSeed,
+				module: module,
+				channel: channel.name,
+				isServer: !!isServer,
+				partner: null,
+				connected: false,
+			};
+			channel.endpoints.push(endpoint);
+			GodotLiveDebug._store_endpoint(module, endpoint);
+			GodotLiveDebug._try_connect(channel);
+			return endpoint.handle;
+		},
+
+		_unregister_peer: function (module, handle) {
+			const endpoint = GodotLiveDebug._remove_endpoint(module, handle);
+			if (!endpoint) {
+				return;
+			}
+			const bus = GodotLiveDebug._get_bus();
+			const channel = bus.channels[endpoint.channel];
+			if (channel) {
+				const idx = channel.endpoints.indexOf(endpoint);
+				if (idx >= 0) {
+					channel.endpoints.splice(idx, 1);
+				}
+				GodotLiveDebug._disconnect_endpoint(endpoint);
+				GodotLiveDebug._try_connect(channel);
+				if (channel.endpoints.length === 0) {
+					delete bus.channels[endpoint.channel];
+				}
+			}
+		},
+
+		_send: function (module, handle, dataPtr, dataLen) {
+			const endpoint = GodotLiveDebug._get_endpoint(module, handle);
+			if (!endpoint || !endpoint.connected || !endpoint.partner) {
+				return 1;
+			}
+			// Copy the payload from the sender's heap using captured helper
+			const payload = module.__godotLiveDebugRead(dataPtr, dataLen);
+			const receiver = endpoint.partner;
+			const receiverModule = receiver.module;
+			// Check receiver has the callback and helpers
+			if (!receiverModule || !receiverModule._godot_js_live_debug_on_payload) {
+				return 2;
+			}
+			if (!receiverModule.__godotLiveDebugMalloc) {
+				return 3;
+			}
+			// Allocate in receiver's heap using captured malloc
+			const ptr = receiverModule.__godotLiveDebugMalloc(payload.length);
+			if (!ptr) {
+				return 4;
+			}
+			// Write to receiver's heap using captured helper
+			receiverModule.__godotLiveDebugWrite(ptr, payload);
+			// Call receiver's callback
+			receiverModule._godot_js_live_debug_on_payload(receiver.handle, ptr, payload.length);
+			receiverModule.__godotLiveDebugFree(ptr);
+			return 0;
+		},
+	},
+
+	godot_js_live_debug_register_peer__deps: ['$GodotLiveDebug'],
+	godot_js_live_debug_register_peer__proxy: 'sync',
+	godot_js_live_debug_register_peer__sig: 'iii',
+	godot_js_live_debug_register_peer: function (p_channel, p_is_server) {
+		const channel = GodotRuntime.parseString(p_channel);
+		return GodotLiveDebug._register_peer(Module, channel, p_is_server);
+	},
+
+	godot_js_live_debug_unregister_peer__deps: ['$GodotLiveDebug'],
+	godot_js_live_debug_unregister_peer__proxy: 'sync',
+	godot_js_live_debug_unregister_peer__sig: 'vi',
+	godot_js_live_debug_unregister_peer: function (p_handle) {
+		GodotLiveDebug._unregister_peer(Module, p_handle);
+	},
+
+	godot_js_live_debug_send__deps: ['$GodotLiveDebug'],
+	godot_js_live_debug_send__proxy: 'sync',
+	godot_js_live_debug_send__sig: 'iiii',
+	godot_js_live_debug_send: function (p_handle, p_data, p_length) {
+		return GodotLiveDebug._send(Module, p_handle, p_data, p_length);
+	},
+};
+mergeInto(LibraryManager.library, GodotLiveDebug);
+
 /*
  * Godot event listeners.
  * Keeps track of registered event listeners so it can remove them on shutdown.
