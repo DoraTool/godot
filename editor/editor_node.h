@@ -317,10 +317,13 @@ private:
 	Control *left_menu_spacer = nullptr;
 	Control *right_menu_spacer = nullptr;
 	EditorTitleBar *title_bar = nullptr;
+	EditorTitleBar *easy_mode_title_bar = nullptr;
 	EditorRunBar *project_run_bar = nullptr;
 	MenuBar *main_menu = nullptr;
+	MenuBar *easy_mode_main_menu = nullptr;
 	PopupMenu *apple_menu = nullptr;
 	PopupMenu *file_menu = nullptr;
+	PopupMenu *file_menu_easy = nullptr;
 	PopupMenu *project_menu = nullptr;
 	PopupMenu *debug_menu = nullptr;
 	PopupMenu *settings_menu = nullptr;

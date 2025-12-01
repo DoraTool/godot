@@ -351,9 +351,21 @@ void EditorNode::set_easy_mode(bool p_enabled) {
 	EditorSettings::get_singleton()->set("interface/editor/easy_mode", p_enabled);
 	EditorSettings::get_singleton()->save();
 
-	// Hide/show entire title bar based on easy mode.
-	if (singleton->title_bar) {
-		singleton->title_bar->set_visible(!p_enabled);
+	// Swap visibility between normal and easy mode title bars.
+	// Both remain in the scene tree so MenuBar shortcuts always work.
+	// Move the visible one to index 0 so it always appears at the top.
+	if (singleton->title_bar && singleton->easy_mode_title_bar) {
+		if (p_enabled) {
+			// Easy mode: show easy_mode_title_bar at top, hide title_bar
+			// singleton->main_vbox->move_child(singleton->easy_mode_title_bar, 0);
+			singleton->title_bar->set_visible(false);
+			singleton->easy_mode_title_bar->set_visible(true);
+		} else {
+			// Normal mode: show title_bar at top, hide easy_mode_title_bar
+			// singleton->main_vbox->move_child(singleton->title_bar, 0);
+			singleton->easy_mode_title_bar->set_visible(false);
+			singleton->title_bar->set_visible(true);
+		}
 	}
 
 	// Apply the appropriate dock layout.
@@ -7227,6 +7239,11 @@ EditorNode::EditorNode() {
 	title_bar = memnew(EditorTitleBar);
 	main_vbox->add_child(title_bar);
 
+	// Create easy mode title bar container (menu will be set up later when global_menu is available)
+	easy_mode_title_bar = memnew(EditorTitleBar);
+	main_vbox->add_child(easy_mode_title_bar);
+	easy_mode_title_bar->set_visible(false); // Hidden by default
+
 	left_l_hsplit = memnew(DockSplitContainer);
 	left_l_hsplit->set_name("DockHSplitLeftL");
 	main_vbox->add_child(left_l_hsplit);
@@ -7653,6 +7670,30 @@ EditorNode::EditorNode() {
 		help_menu->add_icon_shortcut(theme->get_icon(SNAME("Godot"), EditorStringName(EditorIcons)), ED_SHORTCUT_AND_COMMAND("editor/about", TTRC("About Godot...")), HELP_ABOUT);
 	}
 	help_menu->add_icon_shortcut(theme->get_icon(SNAME("Heart"), EditorStringName(EditorIcons)), ED_SHORTCUT_AND_COMMAND("editor/support_development", TTRC("Support Godot Development")), HELP_SUPPORT_GODOT_DEVELOPMENT);
+
+	// Set up easy mode title bar menu (container was created earlier, right after regular title_bar)
+	easy_mode_main_menu = memnew(MenuBar);
+	easy_mode_main_menu->set_mouse_filter(Control::MOUSE_FILTER_STOP);
+	easy_mode_title_bar->add_child(easy_mode_main_menu);
+	easy_mode_main_menu->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
+	easy_mode_main_menu->set_theme_type_variation("MainMenuBar");
+	easy_mode_main_menu->set_start_index(0);
+	easy_mode_main_menu->set_prefer_global_menu(global_menu);
+	easy_mode_main_menu->set_switch_on_hover(true);
+
+	file_menu_easy = memnew(PopupMenu);
+	file_menu_easy->set_name(TTR("Files"));
+	easy_mode_main_menu->add_child(file_menu_easy);
+	easy_mode_main_menu->set_menu_tooltip(0, TTR("Operations with scene files."));
+
+	// Add only Save, Undo, Redo - reusing existing shortcuts and handlers
+	file_menu_easy->add_shortcut(ED_SHORTCUT_AND_COMMAND("editor/save_scene", TTRC("Save Scene"), KeyModifierMask::CMD_OR_CTRL + Key::S), FILE_SAVE_SCENE);
+	file_menu_easy->add_separator();
+	file_menu_easy->add_shortcut(ED_GET_SHORTCUT("ui_undo"), FILE_UNDO, false, true);
+	file_menu_easy->add_shortcut(ED_GET_SHORTCUT("ui_redo"), FILE_REDO, false, true);
+
+	// Connect to the same handler - reuses existing code!
+	file_menu_easy->connect(SceneStringName(id_pressed), callable_mp(this, &EditorNode::_menu_option));
 
 	// Spacer to center 2D / 3D / Script buttons.
 	Control *right_spacer = memnew(Control);
@@ -8220,6 +8261,10 @@ EditorNode::EditorNode() {
 	easy_mode = EDITOR_GET("interface/editor/easy_mode");
 	if (easy_mode) {
 		title_bar->set_visible(false);
+		easy_mode_title_bar->set_visible(true);
+	} else {
+		title_bar->set_visible(true);
+		easy_mode_title_bar->set_visible(false);
 	}
 }
 
