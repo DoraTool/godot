@@ -154,7 +154,7 @@ void MenuBar::shortcut_input(const Ref<InputEvent> &p_event) {
 	}
 
 	if (p_event->is_pressed() && (Object::cast_to<InputEventKey>(p_event.ptr()) || Object::cast_to<InputEventJoypadButton>(p_event.ptr()) || Object::cast_to<InputEventAction>(*p_event) || Object::cast_to<InputEventShortcut>(*p_event))) {
-		if (!get_parent() || !is_visible_in_tree()) {
+		if (!get_parent() || (!is_visible_in_tree() && !force_receive_shortcuts)) {
 			return;
 		}
 
@@ -679,6 +679,8 @@ void MenuBar::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_switch_on_hover", "enable"), &MenuBar::set_switch_on_hover);
 	ClassDB::bind_method(D_METHOD("is_switch_on_hover"), &MenuBar::is_switch_on_hover);
 	ClassDB::bind_method(D_METHOD("set_disable_shortcuts", "disabled"), &MenuBar::set_disable_shortcuts);
+	ClassDB::bind_method(D_METHOD("set_force_receive_shortcuts", "enabled"), &MenuBar::set_force_receive_shortcuts);
+	ClassDB::bind_method(D_METHOD("is_force_receive_shortcuts"), &MenuBar::is_force_receive_shortcuts);
 
 	ClassDB::bind_method(D_METHOD("set_prefer_global_menu", "enabled"), &MenuBar::set_prefer_global_menu);
 	ClassDB::bind_method(D_METHOD("is_prefer_global_menu"), &MenuBar::is_prefer_global_menu);
@@ -754,6 +756,14 @@ bool MenuBar::is_switch_on_hover() {
 
 void MenuBar::set_disable_shortcuts(bool p_disabled) {
 	disable_shortcuts = p_disabled;
+}
+
+void MenuBar::set_force_receive_shortcuts(bool p_enabled) {
+	force_receive_shortcuts = p_enabled;
+}
+
+bool MenuBar::is_force_receive_shortcuts() const {
+	return force_receive_shortcuts;
 }
 
 void MenuBar::set_text_direction(Control::TextDirection p_text_direction) {

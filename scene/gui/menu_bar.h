@@ -40,6 +40,7 @@ class MenuBar : public Control {
 
 	bool switch_on_hover = true;
 	bool disable_shortcuts = false;
+	bool force_receive_shortcuts = false;
 	bool prefer_native = true;
 	bool flat = false;
 	int start_index = -1;
@@ -154,6 +155,8 @@ public:
 	void set_switch_on_hover(bool p_enabled);
 	bool is_switch_on_hover();
 	void set_disable_shortcuts(bool p_disabled);
+	void set_force_receive_shortcuts(bool p_enabled);
+	bool is_force_receive_shortcuts() const;
 
 	void set_prefer_global_menu(bool p_enabled);
 	bool is_prefer_global_menu() const;

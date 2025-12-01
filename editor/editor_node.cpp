@@ -7696,6 +7696,8 @@ EditorNode::EditorNode() {
 	easy_mode_main_menu->set_start_index(0);
 	easy_mode_main_menu->set_prefer_global_menu(global_menu);
 	easy_mode_main_menu->set_switch_on_hover(true);
+	easy_mode_main_menu->set_force_receive_shortcuts(true); // Allow shortcuts even when hidden
+	easy_mode_main_menu->set_visible(false); // Hide MenuBar but keep shortcuts working
 
 	file_menu_easy = memnew(PopupMenu);
 	file_menu_easy->set_name(TTR("Files"));
