@@ -5375,6 +5375,10 @@ void EditorNode::save_editor_layout_delayed() {
 void EditorNode::_load_editor_layout() {
 	EditorProgress ep("loading_editor_layout", TTR("Loading editor"), 5);
 	ep.step(TTR("Loading editor layout..."), 0, true);
+	
+	// Load easy mode state early so we can use the correct layout.
+	easy_mode = EDITOR_GET("interface/editor/easy_mode");
+	
 	Ref<ConfigFile> config;
 	config.instantiate();
 	Error err = config->load(EditorPaths::get_singleton()->get_project_settings_dir().path_join("editor_layout.cfg"));
@@ -5392,6 +5396,13 @@ void EditorNode::_load_editor_layout() {
 
 		if (overridden_default_layout >= 0) {
 			_layout_menu_option(overridden_default_layout);
+		} else {
+			// No saved config and no overridden layout - use easy mode layout if enabled, otherwise default.
+			if (easy_mode && easy_mode_layout.is_valid()) {
+				editor_dock_manager->load_docks_from_config(easy_mode_layout, "docks");
+			} else if (default_layout.is_valid()) {
+				editor_dock_manager->load_docks_from_config(default_layout, "docks");
+			}
 		}
 	} else {
 		ep.step(TTR("Loading docks..."), 1, true);
@@ -5663,7 +5674,12 @@ void EditorNode::_layout_menu_option(int p_id) {
 			layout_dialog->popup_centered();
 		} break;
 		case LAYOUT_DEFAULT: {
-			editor_dock_manager->load_docks_from_config(default_layout, "docks");
+			// Use easy mode layout if easy mode is enabled, otherwise use default layout.
+			if (easy_mode && easy_mode_layout.is_valid()) {
+				editor_dock_manager->load_docks_from_config(easy_mode_layout, "docks");
+			} else if (default_layout.is_valid()) {
+				editor_dock_manager->load_docks_from_config(default_layout, "docks");
+			}
 			_save_editor_layout();
 		} break;
 		default: {
