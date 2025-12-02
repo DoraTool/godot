@@ -75,7 +75,7 @@ const Engine = (function () {
 			 * @param {string=} basePath Base path of the engine to load.
 			 * @return {Promise} A ``Promise`` that resolves once the engine is loaded and initialized.
 			 */
-			init: function (basePath) {
+			init: function (basePath, fsSystem) {
 				if (initPromise) {
 					return initPromise;
 				}
@@ -96,7 +96,7 @@ const Engine = (function () {
 							const cloned = new Response(response.clone().body, { 'headers': [['content-type', 'application/wasm']] });
 							Godot(me.config.getModuleConfig(loadPath, cloned)).then(function (module) {
 								const paths = me.config.persistentPaths;
-								module['initFS'](paths).then(function (err) {
+								module['initFS'](paths, fsSystem).then(function (err) {
 									me.rtenv = module;
 									if (me.config.unloadAfterInit) {
 										Engine.unload();
