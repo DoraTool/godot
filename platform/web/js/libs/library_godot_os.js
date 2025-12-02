@@ -131,7 +131,7 @@ const GodotFS = {
 		// Returns a promise that resolves when the FS is ready.
 		// We keep track of mount_points, so that we can properly close the IDBFS
 		// since emscripten is not doing it by itself. (emscripten GH#12516).
-		init: function (persistentPaths) {
+		init: function (persistentPaths, fsSystem) {
 			GodotFS._idbfs = false;
 			if (!Array.isArray(persistentPaths)) {
 				return Promise.reject(new Error('Persistent paths must be an array'));
@@ -153,22 +153,28 @@ const GodotFS = {
 				}
 			}
 
+			if (fsSystem) {
+				fsSystem.FS = FS;
+			}
+			
 			GodotFS._mount_points.forEach(function (path) {
 				createRecursive(path);
-				FS.mount(IDBFS, {}, path);
+				FS.mount(fsSystem || IDBFS, {}, path);
 			});
-			return new Promise(function (resolve, reject) {
-				FS.syncfs(true, function (err) {
-					if (err) {
-						GodotFS._mount_points = [];
-						GodotFS._idbfs = false;
-						GodotRuntime.print(`IndexedDB not available: ${err.message}`);
-					} else {
-						GodotFS._idbfs = true;
-					}
-					resolve(err);
-				});
-			});
+			return Promise.resolve();
+
+			// return new Promise(function (resolve, reject) {
+			// 	FS.syncfs(true, function (err) {
+			// 		if (err) {
+			// 			GodotFS._mount_points = [];
+			// 			GodotFS._idbfs = false;
+			// 			GodotRuntime.print(`IndexedDB not available: ${err.message}`);
+			// 		} else {
+			// 			GodotFS._idbfs = true;
+			// 		}
+			// 		resolve(err);
+			// 	});
+			// });
 		},
 
 		// Deinit godot file system, making sure to unmount file systems, and close IDBFS(s).
