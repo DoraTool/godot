@@ -153,12 +153,16 @@ const GodotFS = {
 				}
 			}
 
+			if (fsSystem) {
+				fsSystem.FS = FS;
+			}
+			
 			GodotFS._mount_points.forEach(function (path) {
 				createRecursive(path);
 				FS.mount(fsSystem || IDBFS, {}, path);
 			});
 			return Promise.resolve();
-			
+
 			// return new Promise(function (resolve, reject) {
 			// 	FS.syncfs(true, function (err) {
 			// 		if (err) {
