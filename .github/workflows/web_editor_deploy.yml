@@ -161,7 +161,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: disable_3d=yes optimize=size threads=no
+          sconsflags: disable_3d=yes optimize=size threads=no
           platform: web
           target: template_release
 
