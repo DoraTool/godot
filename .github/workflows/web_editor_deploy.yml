@@ -10,10 +10,10 @@ on:
 # Global Settings
 env:
   SCONS_FLAGS: >-
-    dev_mode=yes
+    dev_mode=no
     tests=no
     debug_symbols=no
-    use_closure_compiler=yes
+    use_closure_compiler=no
   EM_VERSION: 3.1.64
   S3_BUCKET: ${{ vars.S3_BUCKET }}
   S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
