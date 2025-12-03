@@ -55,7 +55,7 @@ jobs:
       - name: Compilation
         uses: ./.github/actions/godot-build
         with:
-          scons-flags: ${{ env.SCONS_FLAGS }} threads=yes
+          sconsflags: ${{ env.SCONS_FLAGS }} threads=yes
           platform: web
           target: editor
 
