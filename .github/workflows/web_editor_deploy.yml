@@ -46,7 +46,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: web-editor
+          cache-name: web-editor-2
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -62,7 +62,7 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: web-editor
+          cache-name: web-editor-2
         continue-on-error: true
 
       - name: Verify build output
@@ -152,7 +152,7 @@ jobs:
       - name: Restore Godot build cache
         uses: ./.github/actions/godot-cache-restore
         with:
-          cache-name: web-runtime
+          cache-name: web-runtime-2
         continue-on-error: true
 
       - name: Setup Python and SCons
@@ -168,7 +168,7 @@ jobs:
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
         with:
-          cache-name: web-runtime
+          cache-name: web-runtime-2
         continue-on-error: true
 
       - name: Verify build output
