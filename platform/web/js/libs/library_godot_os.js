@@ -156,7 +156,7 @@ const GodotFS = {
 			if (fsSystem) {
 				fsSystem.FS = FS;
 			}
-			
+
 			GodotFS._mount_points.forEach(function (path) {
 				createRecursive(path);
 				FS.mount(fsSystem || IDBFS, {}, path);
@@ -430,17 +430,17 @@ mergeInto(LibraryManager.library, GodotOS);
 const GodotLiveDebug = {
 	$GodotLiveDebug__deps: ['$GodotRuntime'],
 	$GodotLiveDebug__postset: [
-		'Module["startDebugServer"] = GodotLiveDebug.start_debug_server;',
-		'Module["stopDebugServer"] = GodotLiveDebug.stop_debug_server;',
+		'Module["start_debug_server"] = GodotLiveDebug.start_debug_server;',
+		'Module["stop_debug_server"] = GodotLiveDebug.stop_debug_server;',
 	].join(''),
 	$GodotLiveDebug: {
 		// Start the editor's debug server from JavaScript.
-		// Usage: Module.startDebugServer("channel_name") or Module.startDebugServer() for default channel.
+		// Usage: Module.start_debug_server("channel_name") or Module.start_debug_server() for default channel.
 		// Returns 0 on success, non-zero on error.
 		start_debug_server: function (channel) {
 			const channelName = channel || 'default';
 			if (!Module._godot_js_editor_start_debug_server) {
-				GodotRuntime.error('startDebugServer is only available in the editor build');
+				GodotRuntime.error('start_debug_server is only available in the editor build');
 				return -1;
 			}
 			const ptr = GodotRuntime.allocString(channelName);
@@ -452,7 +452,7 @@ const GodotLiveDebug = {
 		// Stop the editor's debug server.
 		stop_debug_server: function () {
 			if (!Module._godot_js_editor_stop_debug_server) {
-				GodotRuntime.error('stopDebugServer is only available in the editor build');
+				GodotRuntime.error('stop_debug_server is only available in the editor build');
 				return;
 			}
 			Module._godot_js_editor_stop_debug_server();

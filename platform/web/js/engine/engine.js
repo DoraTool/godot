@@ -493,6 +493,38 @@ const Engine = (function () {
 				}
 				Module._godot_js_reload_current_scene();
 			},
+
+			/**
+			 * Start the editor's debug server to accept connections from game instances.
+			 * Only available in editor builds.
+			 * @param {string} [channel='default'] - The channel name for the debug connection.
+			 * @returns {number} 0 on success, non-zero on error.
+			 */
+			startDebugServer: function (channel) {
+				if (!this.rtenv) {
+					throw new Error('Engine must be initialized before starting debug server');
+				}
+				const Module = this.rtenv;
+				if (!Module.start_debug_server) {
+					throw new Error('Debug server API not available (editor build only)');
+				}
+				return Module.start_debug_server(channel);
+			},
+
+			/**
+			 * Stop the editor's debug server.
+			 * Only available in editor builds.
+			 */
+			stopDebugServer: function () {
+				if (!this.rtenv) {
+					throw new Error('Engine must be initialized before stopping debug server');
+				}
+				const Module = this.rtenv;
+				if (!Module.stop_debug_server) {
+					throw new Error('Debug server API not available (editor build only)');
+				}
+				Module.stop_debug_server();
+			},
 		};
 
 		Engine.prototype = proto;
@@ -512,6 +544,8 @@ const Engine = (function () {
 		Engine.prototype['onSave'] = Engine.prototype.onSave;
 		Engine.prototype['offSave'] = Engine.prototype.offSave;
 		Engine.prototype['reloadCurrentScene'] = Engine.prototype.reloadCurrentScene;
+		Engine.prototype['startDebugServer'] = Engine.prototype.startDebugServer;
+		Engine.prototype['stopDebugServer'] = Engine.prototype.stopDebugServer;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;
