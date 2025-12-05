@@ -106,6 +106,8 @@ private:
 	bool tts = false;
 	NativeMenu *native_menu = nullptr;
 
+	float cached_pixel_ratio = 1.0f;
+
 	MouseMode mouse_mode_base = MOUSE_MODE_VISIBLE;
 	MouseMode mouse_mode_override = MOUSE_MODE_VISIBLE;
 	bool mouse_mode_override_enabled = false;

@@ -64,6 +64,15 @@ bool DisplayServerWeb::check_size_force_redraw() {
 		rect_changed_callback.call(size);
 		emscripten_set_canvas_element_size(canvas_id, window_size.x, window_size.y);
 	}
+
+	// Check for DPI changes
+	float current_pixel_ratio = godot_js_display_pixel_ratio_get();
+	if (current_pixel_ratio != cached_pixel_ratio) {
+		cached_pixel_ratio = current_pixel_ratio;
+		send_window_event_callback(DisplayServer::WINDOW_EVENT_DPI_CHANGE);
+		print_line(vformat("DPI changed from %f to %f", cached_pixel_ratio, current_pixel_ratio));
+	}
+
 	return size_changed;
 }
 
@@ -1094,6 +1103,9 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 
 	// Handle contextmenu, webglcontextlost
 	godot_js_display_setup_canvas(p_resolution.x, p_resolution.y, (p_window_mode == WINDOW_MODE_FULLSCREEN || p_window_mode == WINDOW_MODE_EXCLUSIVE_FULLSCREEN), OS::get_singleton()->is_hidpi_allowed() ? 1 : 0);
+
+	// Initialize cached pixel ratio for DPI change detection
+	cached_pixel_ratio = godot_js_display_pixel_ratio_get();
 
 	// Check if it's windows.
 	swap_cancel_ok = godot_js_display_is_swap_ok_cancel() == 1;

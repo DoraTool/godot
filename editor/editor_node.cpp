@@ -842,6 +842,22 @@ void EditorNode::_notification(int p_what) {
 			_menu_option_confirm(FILE_QUIT, false);
 		} break;
 
+		case NOTIFICATION_WM_DPI_CHANGE: {
+			print_line(vformat("DPI changed notification received"));
+			// Recalculate editor scale when DPI changes
+			int display_scale = EDITOR_GET("interface/editor/display_scale");
+			if (display_scale == 0) {
+				print_line("Auto mode: recalculate based on current DPI");
+				// Auto mode: recalculate based on current DPI
+				EditorScale::set_scale(EditorSettings::get_singleton()->get_auto_display_scale());
+				// Regenerate theme with new scale to update UI elements
+				// Note: This is needed because is_generated_theme_outdated() doesn't check scale
+				// changes (it assumes restart is required), but we want dynamic updates on DPI change
+				_update_theme();
+			}
+			// For fixed scale modes (1-6), keep the same scale as they're user-defined
+		} break;
+
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 			if (EditorSettings::get_singleton()->check_changed_settings_in_group("filesystem/file_dialog")) {
 				FileDialog::set_default_show_hidden_files(EDITOR_GET("filesystem/file_dialog/show_hidden_files"));
