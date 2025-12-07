@@ -161,20 +161,23 @@ const GodotFS = {
 				createRecursive(path);
 				FS.mount(fsSystem || IDBFS, {}, path);
 			});
-			return Promise.resolve();
 
-			// return new Promise(function (resolve, reject) {
-			// 	FS.syncfs(true, function (err) {
-			// 		if (err) {
-			// 			GodotFS._mount_points = [];
-			// 			GodotFS._idbfs = false;
-			// 			GodotRuntime.print(`IndexedDB not available: ${err.message}`);
-			// 		} else {
-			// 			GodotFS._idbfs = true;
-			// 		}
-			// 		resolve(err);
-			// 	});
-			// });
+			if (fsSystem) {
+				return Promise.resolve();
+			}
+
+			return new Promise(function (resolve, reject) {
+				FS.syncfs(true, function (err) {
+					if (err) {
+						GodotFS._mount_points = [];
+						GodotFS._idbfs = false;
+						GodotRuntime.print(`IndexedDB not available: ${err.message}`);
+					} else {
+						GodotFS._idbfs = true;
+					}
+					resolve(err);
+				});
+			});
 		},
 
 		// Deinit godot file system, making sure to unmount file systems, and close IDBFS(s).
