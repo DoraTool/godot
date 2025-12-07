@@ -31,6 +31,7 @@
 #ifdef TOOLS_ENABLED
 
 #include "editor/debugger/editor_debugger_node.h"
+#include "editor/editor_file_system.h"
 
 #include <emscripten.h>
 
@@ -59,6 +60,18 @@ EMSCRIPTEN_KEEPALIVE void godot_js_editor_stop_debug_server() {
 	if (debugger) {
 		debugger->stop(true);
 	}
+}
+
+// Trigger a filesystem scan to reload resources from disk (e.g., after external edits).
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_scan_filesystem() {
+	EditorFileSystem *efs = EditorFileSystem::get_singleton();
+	if (!efs) {
+		return 1; // Editor not initialized
+	}
+
+	efs->scan();
+	return 0;
 }
 
 } // extern "C"

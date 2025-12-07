@@ -404,6 +404,22 @@ export declare class Engine {
     reloadCachedFiles(paths: string[]): void;
 
     /**
+     * Rescan the project filesystem to pick up external changes on disk.
+     * Only available in editor builds after the engine is initialized.
+     *
+    * @returns 0 on success, non-zero on error:
+    *          -1 if not available (non-editor build),
+    *          1 if editor not initialized.
+     *
+     * @example
+     * ```javascript
+     * // After writing files via JS or external tooling, rescan to update the editor
+     * editor.scanFilesystem();
+     * ```
+     */
+    scanFilesystem(): number;
+
+    /**
      * Start the editor's debug server on the specified channel.
      * This allows external game instances to connect for live debugging.
      * Only available in editor builds after the engine is initialized.

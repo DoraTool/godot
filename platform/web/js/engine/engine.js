@@ -495,6 +495,23 @@ const Engine = (function () {
 			},
 
 			/**
+			 * Rescan the project filesystem to pick up external changes on disk.
+			 * Only available in editor builds after the engine is initialized.
+			 * Note: this triggers a scan and returns immediately; completion is signaled via editor events, not a Promise.
+			 * @returns {number} 0 on success, non-zero on error.
+			 */
+			scanFilesystem: function () {
+				if (!this.rtenv) {
+					throw new Error('Engine must be initialized before scanning filesystem');
+				}
+				const Module = this.rtenv;
+				if (!Module.scan_filesystem) {
+					throw new Error('Filesystem scan API not available (editor build only)');
+				}
+				return Module.scan_filesystem();
+			},
+
+			/**
 			 * Start the editor's debug server to accept connections from game instances.
 			 * Only available in editor builds.
 			 * @param {string} [channel='default'] - The channel name for the debug connection.
@@ -544,6 +561,7 @@ const Engine = (function () {
 		Engine.prototype['onSave'] = Engine.prototype.onSave;
 		Engine.prototype['offSave'] = Engine.prototype.offSave;
 		Engine.prototype['reloadCurrentScene'] = Engine.prototype.reloadCurrentScene;
+		Engine.prototype['scanFilesystem'] = Engine.prototype.scanFilesystem;
 		Engine.prototype['startDebugServer'] = Engine.prototype.startDebugServer;
 		Engine.prototype['stopDebugServer'] = Engine.prototype.stopDebugServer;
 		// Also expose static methods as instance methods

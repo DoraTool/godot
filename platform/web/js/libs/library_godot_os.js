@@ -435,6 +435,7 @@ const GodotLiveDebug = {
 	$GodotLiveDebug__postset: [
 		'Module["start_debug_server"] = GodotLiveDebug.start_debug_server;',
 		'Module["stop_debug_server"] = GodotLiveDebug.stop_debug_server;',
+		'Module["scan_filesystem"] = GodotLiveDebug.scan_filesystem;',
 	].join(''),
 	$GodotLiveDebug: {
 		// Start the editor's debug server from JavaScript.
@@ -459,6 +460,15 @@ const GodotLiveDebug = {
 				return;
 			}
 			Module._godot_js_editor_stop_debug_server();
+		},
+
+		// Trigger a filesystem scan to reload resources from disk. Useful after external edits.
+		scan_filesystem: function () {
+			if (!Module._godot_js_editor_scan_filesystem) {
+				GodotRuntime.error('scan_filesystem is only available in the editor build');
+				return -1;
+			}
+			return Module._godot_js_editor_scan_filesystem();
 		},
 
 		// Called during registration (in the module's own JS context) to capture
