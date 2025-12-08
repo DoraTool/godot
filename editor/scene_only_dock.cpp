@@ -36,6 +36,7 @@
 #include "core/os/os.h"
 #include "core/string/translation.h"
 #include "editor/editor_file_system.h"
+#include "editor/editor_interface.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/themes/editor_scale.h"
@@ -383,6 +384,7 @@ void SceneOnlyDock::_context_menu_id_pressed(int p_id) {
 }
 
 void SceneOnlyDock::_open_in_editor(const String &p_path) {
+	EditorInterface::get_singleton()->set_main_screen_editor("2D");
 	EditorNode::get_singleton()->open_request(p_path);
 }
 
