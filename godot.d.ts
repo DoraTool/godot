@@ -455,6 +455,24 @@ export declare class Engine {
      */
     stopDebugServer(): void;
 
+    /**
+     * Automatically save the current scene and all open scripts.
+     * Only available in editor builds after the engine is initialized.
+     * 
+     * @returns 0 on success, non-zero on error.
+     * 
+     * @example
+     * ```javascript
+     * const result = editor.autoSave();
+     * if (result === 0) {
+     *     console.log("Auto-save successful");
+     * } else {
+     *     console.error("Auto-save failed with code:", result);
+     * }
+     * ```
+     */
+    autoSave(): number;
+
     // Static methods
 
     /**
