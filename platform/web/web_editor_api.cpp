@@ -32,6 +32,7 @@
 
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_file_system.h"
+#include "editor/editor_node.h"
 
 #include <emscripten.h>
 
@@ -71,6 +72,42 @@ EMSCRIPTEN_KEEPALIVE int godot_js_editor_scan_filesystem() {
 	}
 
 	efs->scan();
+	return 0;
+}
+
+// Reload modified scenes that have been changed on disk.
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_reload_modified_scenes() {
+	EditorNode *editor = EditorNode::get_singleton();
+	if (!editor) {
+		return 1; // Editor not initialized
+	}
+
+	editor->reload_modified_scenes();
+	return 0;
+}
+
+// Reload project settings from disk.
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_reload_project_settings() {
+	EditorNode *editor = EditorNode::get_singleton();
+	if (!editor) {
+		return 1; // Editor not initialized
+	}
+
+	editor->reload_project_settings();
+	return 0;
+}
+
+// Scan filesystem for changes to detect modified files.
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_scan_filesystem_changes() {
+	EditorFileSystem *efs = EditorFileSystem::get_singleton();
+	if (!efs) {
+		return 1; // Editor not initialized
+	}
+
+	efs->scan_changes();
 	return 0;
 }
 

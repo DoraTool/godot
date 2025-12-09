@@ -702,6 +702,10 @@ public:
 
 	static EditorNode *get_singleton() { return singleton; }
 
+	// Public methods for JavaScript bridge
+	void reload_modified_scenes() { _reload_modified_scenes(); }
+	void reload_project_settings() { _reload_project_settings(); }
+
 	static bool is_easy_mode() { return singleton->easy_mode; }
 	static void set_easy_mode(bool p_enabled);
 

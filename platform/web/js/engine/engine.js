@@ -495,20 +495,31 @@ const Engine = (function () {
 			},
 
 			/**
-			 * Rescan the project filesystem to pick up external changes on disk.
+			 * Load modified files by scanning filesystem changes, reloading modified scenes and project settings.
 			 * Only available in editor builds after the engine is initialized.
-			 * Note: this triggers a scan and returns immediately; completion is signaled via editor events, not a Promise.
+			 * This scans for filesystem changes (which triggers script reloading), reloads scenes that have been modified on disk, and refreshes project settings.
 			 * @returns {number} 0 on success, non-zero on error.
 			 */
-			scanFilesystem: function () {
+			loadModifiedFiles: function () {
 				if (!this.rtenv) {
-					throw new Error('Engine must be initialized before scanning filesystem');
+					throw new Error('Engine must be initialized before loading modified files');
 				}
 				const Module = this.rtenv;
-				if (!Module.scan_filesystem) {
-					throw new Error('Filesystem scan API not available (editor build only)');
+				if (!Module._godot_js_editor_scan_filesystem_changes || !Module._godot_js_editor_reload_modified_scenes || !Module._godot_js_editor_reload_project_settings) {
+					throw new Error('Load modified files API not available (editor build only)');
 				}
-				return Module.scan_filesystem();
+				// First scan filesystem for changes (triggers script reloading)
+				const scanResult = Module._godot_js_editor_scan_filesystem_changes();
+				if (scanResult !== 0) {
+					return scanResult;
+				}
+				// Then reload modified scenes
+				const reloadScenesResult = Module._godot_js_editor_reload_modified_scenes();
+				if (reloadScenesResult !== 0) {
+					return reloadScenesResult;
+				}
+				// Finally reload project settings
+				return Module._godot_js_editor_reload_project_settings();
 			},
 
 			/**

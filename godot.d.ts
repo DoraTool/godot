@@ -404,8 +404,9 @@ export declare class Engine {
     reloadCachedFiles(paths: string[]): void;
 
     /**
-     * Rescan the project filesystem to pick up external changes on disk.
+     * Load modified files by reloading modified scenes and project settings.
      * Only available in editor builds after the engine is initialized.
+     * This reloads scenes that have been modified on disk and refreshes project settings.
      *
     * @returns 0 on success, non-zero on error:
     *          -1 if not available (non-editor build),
@@ -413,11 +414,11 @@ export declare class Engine {
      *
      * @example
      * ```javascript
-     * // After writing files via JS or external tooling, rescan to update the editor
-     * editor.scanFilesystem();
+     * // After modifying files externally, reload modified scenes and project settings
+     * editor.loadModifiedFiles();
      * ```
      */
-    scanFilesystem(): number;
+    loadModifiedFiles(): number;
 
     /**
      * Start the editor's debug server on the specified channel.
