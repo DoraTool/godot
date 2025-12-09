@@ -265,7 +265,7 @@ export declare class Engine {
      * @param basePath Base path of the engine to load.
      * @return A Promise that resolves once the engine is loaded and initialized.
      */
-    init(basePath?: string): Promise<void>;
+    init(basePath?: string, fsSystem?: any): Promise<void>;
 
     /**
      * Load a file so it is available in the instance's file system once it runs. Must be called **before** starting the
