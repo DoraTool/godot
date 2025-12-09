@@ -955,6 +955,7 @@ public:
 	void save_scene_list(const HashSet<String> &p_scene_paths);
 	void save_before_run();
 	void try_autosave();
+	void save_scene_silently(); // Public wrapper for _save_scene_silently()
 	void restart_editor(bool p_goto_project_manager = false);
 	void unload_editor_addons();
 

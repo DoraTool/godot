@@ -553,6 +553,28 @@ const Engine = (function () {
 				}
 				Module.stop_debug_server();
 			},
+
+			/**
+			 * Automatically save the current scene and all open scripts.
+			 * Only available in editor builds after the engine is initialized.
+			 * @returns {number} 0 on success, non-zero on error.
+			 */
+			autoSave: function () {
+				if (!this.rtenv) {
+					throw new Error('Engine must be initialized before auto-saving');
+				}
+				const Module = this.rtenv;
+				if (!Module._godot_js_editor_save_scene_silently || !Module._godot_js_editor_autosave_scripts) {
+					throw new Error('Auto-save API not available (editor build only)');
+				}
+				// Save scene silently
+				const sceneResult = Module._godot_js_editor_save_scene_silently();
+				if (sceneResult !== 0) {
+					return sceneResult;
+				}
+				// Auto-save scripts
+				return Module._godot_js_editor_autosave_scripts();
+			},
 		};
 
 		Engine.prototype = proto;
@@ -575,6 +597,7 @@ const Engine = (function () {
 		Engine.prototype['scanFilesystem'] = Engine.prototype.scanFilesystem;
 		Engine.prototype['startDebugServer'] = Engine.prototype.startDebugServer;
 		Engine.prototype['stopDebugServer'] = Engine.prototype.stopDebugServer;
+		Engine.prototype['autoSave'] = Engine.prototype.autoSave;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;

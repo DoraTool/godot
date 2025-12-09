@@ -2124,6 +2124,10 @@ void EditorNode::try_autosave() {
 	editor_data.save_editor_external_data();
 }
 
+void EditorNode::save_scene_silently() {
+	_save_scene_silently();
+}
+
 void EditorNode::restart_editor(bool p_goto_project_manager) {
 	_menu_option_confirm(p_goto_project_manager ? PROJECT_QUIT_TO_PROJECT_MANAGER : PROJECT_RELOAD_CURRENT_PROJECT, false);
 }

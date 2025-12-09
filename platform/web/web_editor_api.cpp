@@ -33,6 +33,7 @@
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_file_system.h"
 #include "editor/editor_node.h"
+#include "editor/plugins/script_editor_plugin.h"
 
 #include <emscripten.h>
 
@@ -108,6 +109,30 @@ EMSCRIPTEN_KEEPALIVE int godot_js_editor_scan_filesystem_changes() {
 	}
 
 	efs->scan_changes();
+	return 0;
+}
+
+// Save the current scene silently (without progress dialog).
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_save_scene_silently() {
+	EditorNode *editor = EditorNode::get_singleton();
+	if (!editor) {
+		return 1; // Editor not initialized
+	}
+
+	editor->save_scene_silently();
+	return 0;
+}
+
+// Automatically save all open scripts.
+// Returns 0 on success, non-zero on error.
+EMSCRIPTEN_KEEPALIVE int godot_js_editor_autosave_scripts() {
+	ScriptEditor *script_editor = ScriptEditor::get_singleton();
+	if (!script_editor) {
+		return 1; // Editor not initialized
+	}
+
+	script_editor->save_all_scripts();
 	return 0;
 }
 
